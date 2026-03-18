@@ -4,7 +4,7 @@ create extension if not exists pgcrypto; -- gen_random_uuid()
 
 -- Enums
 
-create type user_status as enum ('ACTIVE', 'LOCKED');
+create type user_status as enum ('PENDING', 'ACTIVE', 'LOCKED');
 
 create type property_status as enum ('DRAFT', 'PENDING', 'APPROVED', 'REJECTED', 'HIDDEN', 'DELETED');
 
