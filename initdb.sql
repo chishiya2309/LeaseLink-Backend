@@ -86,8 +86,6 @@ create table properties (
 
                             bedrooms smallint check (bedrooms >= 0),
 
-                            bathrooms smallint check (bathrooms >= 0),
-
                             allow_pets boolean default false,
 
                             status property_status not null default 'PENDING',
