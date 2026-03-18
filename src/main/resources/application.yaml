@@ -1,0 +1,49 @@
+spring:
+  application:
+    name: backend
+
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  hikari:
+    pool-name: LeaseLinkPool
+
+    # Free-tier: gi?i h?n nh? ?? không v??t connection cap
+    maximum-pool-size: 3
+    minimum-idle: 0
+
+    # Ch?u cold-start t?t h?n (DB sleep -> wake up)
+    connection-timeout: 60000
+    validation-timeout: 5000
+    initialization-fail-timeout: -1
+
+    # Không gi? connection r?nh quá lâu
+    idle-timeout: 60000
+    max-lifetime: 540000
+
+    # B?t khi c?n debug rò r? connection, m?c ??nh t?t
+    leak-detection-threshold: 0
+
+  jpa:
+    hibernate:
+      ddl-auto: update   # dev: update | prod: validate
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '*'
+
+logging:
+  level:
+    root: INFO
+    web: INFO
+    org.springframework.security: DEBUG
