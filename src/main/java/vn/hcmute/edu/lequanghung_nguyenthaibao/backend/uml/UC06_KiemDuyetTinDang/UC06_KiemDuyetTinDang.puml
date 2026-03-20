@@ -1,0 +1,44 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor Admin
+
+package "LeaseLink System: UC06 - Kiểm duyệt tin đăng" {
+    usecase "UC06: Kiểm duyệt tin đăng" as UC06
+    usecase "Xem danh sách tin chờ duyệt" as VIEW_LIST
+    usecase "Xem chi tiết tin đăng" as VIEW_DETAIL
+    usecase "Phê duyệt tin (Approve)" as APPROVE
+    usecase "Từ chối tin (Reject)" as REJECT
+    usecase "Nhập lý do từ chối (Reason)" as REASON
+    usecase "Gửi thông báo tới Host" as NOTIFY
+    usecase "Ghi Log lịch sử kiểm duyệt" as LOG
+}
+
+Admin -- UC06
+
+UC06 ..> VIEW_LIST : <<include>>
+UC06 ..> VIEW_DETAIL : <<include>>
+
+UC06 <.. APPROVE : <<extend>>
+UC06 <.. REJECT : <<extend>>
+
+REJECT ..> REASON : <<include>>
+
+APPROVE ..> NOTIFY : <<include>>
+REJECT ..> NOTIFY : <<include>>
+
+APPROVE ..> LOG : <<include>>
+REJECT ..> LOG : <<include>>
+
+note right of REASON
+  Bắt buộc nhập lý do
+  khi từ chối duyệt bài.
+end note
+
+note bottom of LOG
+  Lưu ID Admin, thời gian
+  với mục đích truy vết.
+end note
+
+@enduml

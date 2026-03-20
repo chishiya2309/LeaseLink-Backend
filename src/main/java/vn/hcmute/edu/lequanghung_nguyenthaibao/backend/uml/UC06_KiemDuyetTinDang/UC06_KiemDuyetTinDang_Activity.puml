@@ -1,0 +1,42 @@
+@startuml
+|Admin|
+start
+:Truy cập mục "Duyệt Bài";
+|System|
+:Truy xuất Hàng đợi PENDING (FIFO);
+if (Queue còn bài?) then (Có)
+  |Admin|
+  repeat
+    :Chọn bài đăng đầu tiên trong Queue;
+    |System|
+    :Hiển thị chi tiết nội dung (Thẩm định View);
+    |Admin|
+    :Xem xét: Ảnh, Text, Giá, SĐT;
+    if (Nội dung đạt chuẩn?) then (Có - Duyệt)
+      :Nhấn Button "Duyệt (Approve)";
+      |System|
+      :Cập nhật Status = 'APPROVED';
+      :Ghi Log (Admin_ID, Time, Action);
+      :Gửi Notification "Tin đã được đăng";
+    else (Không - Từ chối)
+      :Nhấn Button "Từ chối (Reject)";
+      |System|
+      :Hiển thị popup Reason Dialog;
+      |Admin|
+      :Chọn/Nhập lý do vi phạm (Bắt buộc);
+      :Xác nhận Reject;
+      |System|
+      :Cập nhật Status = 'REJECTED';
+      :Lưu Reason_Message;
+      :Ghi Log (Admin_ID, Time, Action);
+      :Gửi Notification "Yêu cầu chỉnh sửaên";
+    endif
+    |System|
+    :Pop Toast thông báo kết quả;
+    :Tự động đẩy bản tiếp theo lên;
+  repeat while (Tiếp tục duyệt bài?) is (Đồng ý)
+else (Không)
+  :Thông báo "Hàng đợi trống";
+endif
+stop
+@enduml

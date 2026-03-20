@@ -1,0 +1,33 @@
+@startuml
+|Admin|
+start
+:Truy cập mục "User Management";
+if (Hành động?) then (Cấp Account Mới)
+  repeat
+    :Click "Add New Account";
+    :Nhập Name, Phone, Email, Pass;
+    |System|
+    :Validate Unique (Email/Phone);
+  repeat while (Dữ liệu trùng lặp?) is (Có/Lỗi)
+  :Tạo Row mới trong DB (Role=Host);
+  :Kích hoạt Email Service;
+  :Gửi SMTP "Welcome Credential";
+  |Admin|
+  :Thông báo "Cấp Account thành công";
+else (Banning / Lock)
+  :Tìm kiếm Host theo Filter SĐT;
+  :Click "Ban / Lock" trên Row;
+  |System|
+  :Hiển thị Popup "Nhập lý do Ban";
+  |Admin|
+  :Nhập lý do vi phạm (Bắt buộc);
+  :Xác nhận Ban;
+  |System|
+  :Cập nhật `active = false` trong DB;
+  :Xóa Cookie/Session trên mọi thiết bị;
+  :Trigger DB Sweep: Soft Delete toàn bộ bài đăng;
+  |Admin|
+  :Thông báo "Đã khóa và ẩn mọi bài tin liên quan";
+endif
+stop
+@enduml
