@@ -1,0 +1,70 @@
+@startuml
+autonumber
+skinparam SequenceMessageAlign center
+
+actor "Host" as User
+participant "PropertyFormView" as View
+participant "PropertyController" as Ctrl
+participant "AWS S3\n(Storage)" as S3 <<Cloud>>
+participant "PropertyModel" as PModel
+participant "ImageModel" as IModel
+database "Database" as DB
+
+== Khởi tạo Form ==
+User -> View: Chọn "Đăng tin mới"
+View --> User: Tải Form nhập liệu trống
+
+== Nhập liệu & Gửi yêu cầu ==
+User -> View: Điền thông tin (Tiêu đề, Giá, Loại BĐS...)
+User -> View: Đính kèm Ảnh/Video (Max 10MB/file)
+User -> View: Nhấn "Lưu và Đăng xuất bản"
+
+View -> Ctrl: createProperty(data, files)
+activate Ctrl
+
+== Kiểm duyệt (Ngoại lệ A3) ==
+Ctrl -> Ctrl: validateInputs(data)\nKiểm tra trường bắt buộc
+Ctrl -> Ctrl: validateFiles(files)\nKiểm tra định dạng, dung lượng
+
+alt A3: Dữ liệu thiếu hoặc File lỗi
+    Ctrl --> View: Trả về lỗi validation
+    View --> User: Hiển thị lỗi đỏ tại input tương ứng
+else Dữ liệu hợp lệ
+
+    == Upload Media lên Cloud ==
+    group Vòng lặp: Xử lý file
+        loop Cho từng file trong danh sách
+            Ctrl -> S3: uploadFile(file)
+            activate S3
+            note right of S3: Lưu file & Sinh URL
+            S3 --> Ctrl: image_url / video_url
+            deactivate S3
+        end
+    end
+
+    == Lưu Cơ sở dữ liệu ==
+    Ctrl -> PModel: insert(data, status='PENDING')
+    activate PModel
+    PModel -> DB: INSERT INTO properties...
+    activate DB
+    DB --> PModel: new_property_id
+    deactivate DB
+    PModel --> Ctrl: new_property_id
+    deactivate PModel
+
+    Ctrl -> IModel: insertImages(new_property_id, array_urls)
+    activate IModel
+    IModel -> DB: INSERT INTO images (property_id, url)...
+    activate DB
+    DB --> IModel: success
+    deactivate DB
+    IModel --> Ctrl: success
+    deactivate IModel
+
+    == Phản hồi User ==
+    Ctrl --> View: Thông báo "Thành công, chờ kiểm duyệt"
+    View --> User: Điều hướng về PropertyListView (Danh sách quản lý)
+end
+
+deactivate Ctrl
+@enduml

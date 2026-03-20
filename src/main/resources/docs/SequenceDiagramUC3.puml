@@ -1,0 +1,66 @@
+@startuml
+autonumber
+skinparam SequenceMessageAlign center
+
+actor "Guest" as User
+participant "View\n(FilterBox & Grid)" as View
+participant "SearchController" as Ctrl
+participant "PaginationHelper" as Paginate
+participant "PropertyModel" as Model
+database "Database" as DB
+
+== Khởi tạo Tìm kiếm ==
+User -> View: Nhập Keyword, chọn Bộ lọc (Area, Price, Category...)
+User -> View: Nhấn nút "Tìm kiếm"
+
+View -> Ctrl: HTTP GET /search?keyword=...&price=...&page=1
+activate Ctrl
+
+== Xử lý Phân trang & Tham số ==
+Ctrl -> Paginate: getOffsetAndLimit(page, pageSize=10-20)
+activate Paginate
+Paginate --> Ctrl: offset, limit
+deactivate Paginate
+
+Ctrl -> Model: findPropertiesByFilters(params, offset, limit)
+activate Model
+
+== Build Query (Logic xử lý A2 & Quy tắc nghiệp vụ) ==
+alt Ngoại lệ A2: Tham số rỗng
+    Model -> Model: Build Query: Lấy TẤT CẢ
+else Tham số có giá trị
+    Model -> Model: Build Query: Nối các điều kiện bằng phép AND
+end
+
+note over Model: Quy tắc nghiệp vụ bắt buộc:\nWHERE status = 'APPROVED'\nORDER BY created_at DESC
+
+== Truy vấn Cơ sở dữ liệu ==
+Model -> DB: Thực thi Query (SELECT ... LIMIT offset, limit)
+activate DB
+DB --> Model: data_array
+deactivate DB
+
+Model -> DB: Thực thi Query (SELECT COUNT(*) tổng số bài)
+activate DB
+DB --> Model: total_count
+deactivate DB
+
+Model --> Ctrl: data_array, total_count
+deactivate Model
+
+== Phản hồi JSON & Render UI ==
+Ctrl --> View: Trả về JSON { data: [...], total_count }
+deactivate Ctrl
+
+activate View
+alt Ngoại lệ A1: Không tìm thấy bài viết (data_array rỗng)
+    View -> View: Xử lý logic hiển thị Empty State
+    View --> User: Báo "Không tìm thấy kết quả" & Gợi ý AI Search
+else Tìm thấy kết quả (> 0 matches)
+    View -> View: Render PropertyGridListView (Card: Ảnh, Tiêu đề, Giá...)
+    View -> View: Render Thanh Phân trang (Pagination) dựa trên total_count
+    View --> User: Hiển thị lưới danh sách BĐS & Phân trang
+end
+deactivate View
+
+@enduml

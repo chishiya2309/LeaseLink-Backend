@@ -1,0 +1,94 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+skinparam usecase {
+    BackgroundColor #E1F5FE
+    BorderColor #0277BD
+    ArrowColor #0277BD
+}
+
+' --- KHAI BÁO ACTORS ---
+actor "Guest\n(Khách)" as Guest
+actor "Host\n(Chủ nhà)" as Host
+actor "Admin\n(Quản trị viên)" as Admin
+
+' Kế thừa Actor: Chủ nhà cũng có thể đi tìm phòng như Khách
+Guest <|-- Host
+
+' Các hệ thống bên ngoài (Đặt bên phải giống hình mẫu)
+actor "API AI (LLM)\n(Hệ thống ngoài)" as API_AI
+actor "AWS S3\n(Cloud Storage)" as AWS
+
+rectangle "Hệ thống Web Thuê Nhà" {
+
+    ' --- Nhóm Auth (UC01) ---
+    usecase "Đăng ký Chủ nhà" as UC_Register
+    usecase "Đăng nhập" as UC_Login
+
+    note "Xác thực Session/JWT" as N1
+    UC_Login .. N1
+
+    ' --- Nhóm Guest (UC03, UC04, UC05) ---
+    usecase "Tìm kiếm cơ bản" as UC_Search
+    usecase "Tìm kiếm AI" as UC_AISearch
+    usecase "Trích xuất Intent (NLP)" as UC_NLP
+
+    usecase "Xem chi tiết BĐS" as UC_View
+    usecase "Lấy SĐT Liên hệ" as UC_ShowPhone
+
+    ' --- Nhóm Host (UC02) ---
+    usecase "Quản lý tin đăng" as UC_ManageProp
+    usecase "Đăng tin mới" as UC_CreateProp
+    usecase "Cập/nhật ẩn tin" as UC_EditProp
+    usecase "Upload Media" as UC_Upload
+
+    ' --- Nhóm Admin (UC06, UC07) ---
+    usecase "Kiểm duyệt tin đăng" as UC_Moderate
+    usecase "Từ chối kèm lý do" as UC_Reject
+
+    usecase "Quản lý TK Chủ nhà" as UC_ManageHost
+    usecase "Duyệt TK thủ công" as UC_CreateHost
+    usecase "Khóa (Ban) tài khoản" as UC_BanHost
+
+    ' ==========================================
+    ' MỐI QUAN HỆ INCLUDE / EXTEND (CHI TIẾT)
+    ' ==========================================
+
+    ' 1. Logic bắt buộc (Include) -> Chỉ mũi tên vào
+    UC_ManageProp ..> UC_Login : <<include>>
+    UC_Moderate ..> UC_Login : <<include>>
+    UC_ManageHost ..> UC_Login : <<include>>
+
+    UC_CreateProp ..> UC_Upload : <<include>>
+    UC_AISearch ..> UC_NLP : <<include>>
+
+    ' 2. Logic mở rộng/tùy chọn (Extend) -> Chỉ mũi tên ngược lại
+    UC_ShowPhone .u.> UC_View : <<extend>>
+
+    UC_CreateProp .u.> UC_ManageProp : <<extend>>
+    UC_EditProp .u.> UC_ManageProp : <<extend>>
+
+    UC_Reject .u.> UC_Moderate : <<extend>>
+
+    UC_CreateHost .u.> UC_ManageHost : <<extend>>
+    UC_BanHost .u.> UC_ManageHost : <<extend>>
+}
+
+' --- KẾT NỐI ACTOR VỚI USE CASE ---
+Guest --> UC_Register
+Guest --> UC_Search
+Guest --> UC_AISearch
+Guest --> UC_View
+
+Host --> UC_Login
+Host --> UC_ManageProp
+
+Admin --> UC_Login
+Admin --> UC_Moderate
+Admin --> UC_ManageHost
+
+' Kết nối với hệ thống bên ngoài
+UC_NLP --> API_AI
+UC_Upload --> AWS
+
+@enduml

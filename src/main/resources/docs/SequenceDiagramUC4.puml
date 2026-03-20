@@ -1,0 +1,70 @@
+@startuml
+autonumber
+skinparam SequenceMessageAlign center
+
+actor "Guest" as User
+participant "AiChatWidgetView" as View
+participant "AiConversationController" as Ctrl
+participant "AiNLPService" as NLP
+participant "OpenAI/Gemini API" as API <<Cloud>>
+participant "PropertyModel" as Model
+database "Database" as DB
+
+User -> View: Mở khung Chat & Nhập câu hỏi
+User -> View: Nhấn Enter / Gửi tin
+
+View -> View: Hiển thị Loading (Animation gõ chữ)
+activate View
+deactivate View
+
+View -> Ctrl: processChatMessage(session_id, user_text)
+activate Ctrl
+
+== Kiểm tra Quy tắc nghiệp vụ (Rate-limit) ==
+Ctrl -> Ctrl: checkRateLimit(session_id)
+alt Vượt quá 5 lượt/session
+    Ctrl --> View: Trả về lỗi "Hết lượt chat"
+    View --> User: Hiển thị thông báo "Bạn đã hết lượt chat miễn phí..."
+else Số lượt hợp lệ
+
+    == Phân tích Text qua AI Model ==
+    Ctrl -> NLP: extractSearchIntent(user_text)
+    activate NLP
+    NLP -> API: Gửi Prompt (System instructions + user_text)
+    activate API
+
+    alt A2: Lỗi kết nối / Timeout từ Cloud
+        API --> NLP: Lỗi (Timeout / 500/ 429)
+        NLP --> Ctrl: Throw Exception
+        Ctrl --> View: Fall-back Response
+        View --> User: Bot xin lỗi quá tải, gợi ý dùng Bộ lọc (UC03)
+    else API phản hồi thành công
+        API --> NLP: Response Data
+        deactivate API
+        NLP -> NLP: Parse Data sang JSON Object
+        NLP --> Ctrl: parsed_json (VD: {type, bedrooms, location...})
+    deactivate NLP
+
+    == Đánh giá Intent & Truy vấn CSDL ==
+    alt A1: Không có Intent tìm nhà rõ ràng
+        Ctrl -> Ctrl: Kiểm tra parsed_json bị rỗng/thiếu key
+        Ctrl --> View: Response yêu cầu làm rõ
+        View --> User: Bot nói: "Yêu cầu chưa cụ thể, hãy thêm địa điểm..."
+    else Intent hợp lệ
+        Ctrl -> Model: findByAiCriteria(parsed_json)
+        activate Model
+        Model -> DB: Thực thi Semantic Search / SQL Query dựa trên JSON
+        activate DB
+        DB --> Model: property_list
+        deactivate DB
+        Model --> Ctrl: property_list
+        deactivate Model
+
+        Ctrl -> Ctrl: Ghép chuỗi thân thiện (VD: "Dạ em tìm được 3 căn...")\n& Định dạng Carousels
+        Ctrl --> View: Trả về { bot_text, carousels_data }
+        View --> User: Bot trả lời kèm Danh sách thẻ BĐS (Carousels)
+    end
+end
+
+deactivate Ctrl
+@enduml
