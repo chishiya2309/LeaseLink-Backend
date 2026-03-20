@@ -1,37 +1,51 @@
 @startuml
-'https://plantuml.com/activity-diagram-beta
+skinparam conditionStyle inside
+skinparam ActivityBackgroundColor #FEFECE
+skinparam ActivityBorderColor #A80036
 
 start
-:ClickServlet.handleRequest();
-:new page;
-if (Page.onSecurityCheck) then (true)
-  :Page.onInit();
-  if (isForward?) then (no)
-    :Process controls;
-    if (continue processing?) then (no)
-      stop
+:Host truy cập Quản lý tin đăng;
+:Hiển thị danh sách bài đăng;
+
+if (Host chọn thao tác gì?) then (Đăng tin mới)
+    :Hệ thống tải Form trống;
+    :Host nhập thông tin (Tiêu đề, Giá, Loại BĐS...);
+    :Upload Ảnh/Video (Tối đa 10 ảnh, 1 video);
+    :Nhấn "Lưu và Đăng xuất bản";
+
+    if (Dữ liệu & File hợp lệ? [Ngoại lệ A3]) then (Không)
+        :Báo lỗi đỏ tại trường tương ứng\n(Thiếu info hoặc File > 10MB/Sai format);
+        stop
+    else (Có)
+        :Lưu bản ghi Property mới vào DB;
+        :Thiết lập Trạng thái = PENDING;
     endif
 
-    if (isPost?) then (yes)
-      :Page.onPost();
-    else (no)
-      :Page.onGet();
+elseif (Chọn thao tác?) then (Cập nhật [Ngoại lệ A1])
+    :Hệ thống fetch dữ liệu cũ vào Form;
+    :Host chỉnh sửa nội dung / thay đổi file;
+    :Nhấn "Cập nhật";
+
+    if (Dữ liệu & File hợp lệ? [Ngoại lệ A3]) then (Không)
+        :Báo lỗi đỏ tại trường tương ứng;
+        stop
+    else (Có)
+        :Lưu đè dữ liệu lên Property ID hiện tại;
+        :Đổi Trạng thái về PENDING (Chờ duyệt lại);
     endif
-    :Page.onRender();
-  endif
-else (false)
+
+else (Xóa / Ẩn tin [Ngoại lệ A2])
+    :Hiển thị Popup xác nhận "Bạn có muốn ẩn/xóa?";
+
+    if (Host xác nhận?) then (Hủy)
+        stop
+    else (Đồng ý)
+        :Cập nhật Trạng thái = HIDDEN / DELETED\n(Xóa mềm);
+    endif
 endif
 
-if (do redirect?) then (yes)
-  :redirect process;
-else
-  if (do forward?) then (yes)
-    :Forward request;
-  else (no)
-    :Render page template;
-  endif
-endif
-
+:Hiển thị thông báo thành công (Success);
+:Điều hướng Host về màn hình Danh sách;
 stop
 
 @enduml

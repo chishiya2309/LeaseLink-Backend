@@ -1,37 +1,59 @@
 @startuml
-'https://plantuml.com/activity-diagram-beta
+skinparam conditionStyle inside
+skinparam ActivityBackgroundColor #FEFECE
+skinparam ActivityBorderColor #A80036
 
 start
-:ClickServlet.handleRequest();
-:new page;
-if (Page.onSecurityCheck) then (true)
-  :Page.onInit();
-  if (isForward?) then (no)
-    :Process controls;
-    if (continue processing?) then (no)
-      stop
+:Người dùng truy cập hệ thống;
+
+if (Lựa chọn chức năng?) then (Đăng nhập)
+    :Hệ thống hiển thị Form Đăng nhập;
+    :Người dùng nhập Email & Mật khẩu;
+
+    if (Bỏ trống thông tin? [Ngoại lệ A1]) then (Có)
+        :Hiển thị lỗi "Không được bỏ trống";
+        stop
+    else (Không)
+        :Truy vấn CSDL & Đối chiếu Hash;
+
+        if (Thông tin chính xác? [Ngoại lệ A2]) then (Sai)
+            :Báo lỗi "Tài khoản hoặc mật khẩu không chính xác";
+            stop
+        else (Đúng)
+            if (Trạng thái tài khoản?) then (pending [Ngoại lệ A3])
+                :Báo lỗi "Tài khoản đang chờ duyệt";
+                stop
+            elseif (Trạng thái tài khoản?) then (locked [Ngoại lệ A4])
+                :Báo lỗi "Tài khoản bị khóa";
+                stop
+            else (active)
+                :Tạo Session / JWT Token;
+                :Chuyển hướng đến Dashboard tương ứng;
+                stop
+            endif
+        endif
     endif
 
-    if (isPost?) then (yes)
-      :Page.onPost();
-    else (no)
-      :Page.onGet();
+else (Đăng ký Chủ nhà)
+    :Hệ thống hiển thị Form Đăng ký;
+    :Người dùng nhập Thông tin (Tên, Email, Pass...);
+
+    if (Thiếu/Sai định dạng hoặc Pass không khớp? [Ngoại lệ B1, B3]) then (Có)
+        :Hiển thị lỗi trực tiếp trên Form;
+        stop
+    else (Hợp lệ)
+        :Kiểm tra Email trong CSDL;
+
+        if (Email đã tồn tại? [Ngoại lệ B2]) then (Có)
+            :Báo lỗi "Email này đã được đăng ký";
+            stop
+        else (Không)
+            :Mã hóa mật khẩu (Bcrypt/Argon2);
+            :Lưu CSDL với role=HOST, status=pending;
+            :Thông báo "Đăng ký thành công, chờ duyệt";
+            stop
+        endif
     endif
-    :Page.onRender();
-  endif
-else (false)
 endif
-
-if (do redirect?) then (yes)
-  :redirect process;
-else
-  if (do forward?) then (yes)
-    :Forward request;
-  else (no)
-    :Render page template;
-  endif
-endif
-
-stop
 
 @enduml

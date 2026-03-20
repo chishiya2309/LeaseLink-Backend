@@ -1,37 +1,43 @@
 @startuml
-'https://plantuml.com/activity-diagram-beta
+skinparam conditionStyle inside
+skinparam ActivityBackgroundColor #FEFECE
+skinparam ActivityBorderColor #A80036
 
 start
-:ClickServlet.handleRequest();
-:new page;
-if (Page.onSecurityCheck) then (true)
-  :Page.onInit();
-  if (isForward?) then (no)
-    :Process controls;
-    if (continue processing?) then (no)
-      stop
+:Guest mở Tab / Popup "AI Assistant";
+:Hệ thống hiển thị giao diện Chatbot\n(Kèm các Chip Prompt gợi ý nhanh);
+
+repeat
+    :Guest nhập câu hỏi (Plain text tự nhiên)\nvà nhấn Enter;
+
+    :Kiểm tra Rate-limit (Quy tắc nghiệp vụ);
+    if (Vượt quá 5 lượt/session?) then (Có)
+        :Thông báo "Bạn đã hết lượt chat miễn phí.\nVui lòng thử lại sau.";
+        stop
+    else (Chưa vượt)
     endif
 
-    if (isPost?) then (yes)
-      :Page.onPost();
-    else (no)
-      :Page.onGet();
-    endif
-    :Page.onRender();
-  endif
-else (false)
-endif
+    :Hiển thị Loading Indicator (Animation gõ chữ);
+    :Backend gửi Text kèm System Prompt\nđến AI NLP Service (OpenAI/Gemini);
 
-if (do redirect?) then (yes)
-  :redirect process;
-else
-  if (do forward?) then (yes)
-    :Forward request;
-  else (no)
-    :Render page template;
-  endif
-endif
+    if (Kết nối API Model? [Ngoại lệ A2]) then (Lỗi / Timeout)
+        :Thông báo Fall-back xin lỗi do quá tải;
+        :Định hướng Guest sử dụng\nTìm kiếm bộ lọc (UC03);
+        stop
+    else (Thành công)
+        :AI phân tích Text và giải nghĩa;
+
+        if (Có Intent tìm nhà rõ ràng? [Ngoại lệ A1]) then (Không)
+            :Trả về UI Chatbot:\n"Yêu cầu chưa cụ thể, bạn mô tả thêm\nđịa điểm hoặc mức giá nhé!";
+        else (Có)
+            :AI bóc tách & trả về JSON Object\n(VD: type, bedrooms, location...);
+            :Truy vấn Database (Semantic / Vector Search)\ndựa trên JSON tiêu chí;
+            :Ghép kết quả tạo chuỗi String phản hồi thân thiện;
+            :Trả về UI: Text Bot nói + Carousels (Thẻ BĐS);
+        endif
+    endif
+
+repeat while (Guest tiếp tục chat?) is (Có)
 
 stop
-
 @enduml

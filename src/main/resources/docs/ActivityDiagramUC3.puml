@@ -1,37 +1,39 @@
 @startuml
-'https://plantuml.com/activity-diagram-beta
+skinparam conditionStyle inside
+skinparam ActivityBackgroundColor #FEFECE
+skinparam ActivityBorderColor #A80036
 
 start
-:ClickServlet.handleRequest();
-:new page;
-if (Page.onSecurityCheck) then (true)
-  :Page.onInit();
-  if (isForward?) then (no)
-    :Process controls;
-    if (continue processing?) then (no)
-      stop
-    endif
+:Guest truy cập Trang Chủ hoặc Trang Danh Sách;
+:Hệ thống hiển thị thanh Tìm kiếm & Bộ lọc (FilterBox);
 
-    if (isPost?) then (yes)
-      :Page.onPost();
-    else (no)
-      :Page.onGet();
-    endif
-    :Page.onRender();
-  endif
-else (false)
+:Guest nhập từ khóa hoặc tinh chỉnh Bộ lọc\n(Khu vực, Mức giá, Loại BĐS...);
+:Guest nhấn nút "Tìm kiếm";
+
+if (Tham số tìm kiếm có bị bỏ trống? [Ngoại lệ A2]) then (Có)
+    :Hệ thống bỏ qua các tham số lọc;
+    :Thiết lập truy vấn: Lấy TẤT CẢ bài đăng;
+else (Không)
+    :Hệ thống tóm tắt các tham số Filter (Keyword, Price, Category...);
+    :Gửi HTTP GET Request;
+    :Back-End tạo truy vấn (Query) bằng phép AND các điều kiện;
 endif
 
-if (do redirect?) then (yes)
-  :redirect process;
-else
-  if (do forward?) then (yes)
-    :Forward request;
-  else (no)
-    :Render page template;
-  endif
+:Áp dụng Quy tắc nghiệp vụ:\nChỉ lấy bài viết có Status = 'APPROVED';
+:Sắp xếp kết quả: Ngày đăng mới nhất (Descending);
+:Thiết lập Phân trang (Limit 10-20 items/page);
+:Thực thi truy vấn vào Cơ sở dữ liệu;
+
+if (Số lượng kết quả tìm thấy?) then (0 matches [Ngoại lệ A1])
+    :Trả về mảng rỗng (Empty Array);
+    :Hiển thị thông báo "Không tìm thấy kết quả phù hợp...";
+    :Hiển thị gợi ý tính năng AI Search;
+else (> 0 matches)
+    :Trả về JSON mảng Object Property & Tổng số Count;
+    :Front-End render dữ liệu ra màn hình lưới (Grid);
+    :Hiển thị thông tin lên Thẻ Card\n(Ảnh thumbnail, Tiêu đề, Giá, Địa chỉ);
+    :Hiển thị thanh Phân trang (Pagination) ở dưới cùng;
 endif
 
 stop
-
 @enduml
