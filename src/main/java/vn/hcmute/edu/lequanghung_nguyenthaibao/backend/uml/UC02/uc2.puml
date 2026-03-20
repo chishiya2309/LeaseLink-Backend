@@ -1,0 +1,32 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor "Chủ nhà\n(Host)" as host
+
+package "Quản lý tin đăng bất động sản (UC02)" {
+    usecase "Thêm tin đăng mới" as UC_Create
+    usecase "Cập nhật tin đăng" as UC_Update
+    usecase "Ẩn/Xóa tin đăng" as UC_Delete
+
+    usecase "Xác thực dữ liệu & File ảnh\n(Validation)" as UC_Validate
+    usecase "Chuyển trạng thái\nChờ duyệt (PENDING)" as UC_SetPending
+    usecase "Hiển thị lỗi nhập liệu" as UC_Error
+}
+
+' Các thao tác chính của Actor
+host --> UC_Create
+host --> UC_Update
+host --> UC_Delete
+
+' Các mối quan hệ Include (Bắt buộc phải có)
+UC_Create ..> UC_Validate : <<include>>
+UC_Update ..> UC_Validate : <<include>>
+
+UC_Create ..> UC_SetPending : <<include>>
+UC_Update ..> UC_SetPending : <<include>>
+
+' Các mối quan hệ Extend (Luồng ngoại lệ)
+UC_Error .up.> UC_Validate : <<extend>>\n[Thiếu thông tin/Sai định dạng ảnh]
+
+@enduml
