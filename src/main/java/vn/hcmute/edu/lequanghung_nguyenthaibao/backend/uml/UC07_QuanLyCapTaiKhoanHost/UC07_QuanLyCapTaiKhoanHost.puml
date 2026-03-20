@@ -1,0 +1,39 @@
+@startuml
+left to right direction
+skinparam packageStyle rectangle
+
+actor Admin
+
+package "LeaseLink System: UC07 - Quản lý & Cấp Account Host" {
+    usecase "UC07: Quản lý và Cấp tài khoản Chủ nhà" as UC07
+    usecase "Xem danh sách Chủ nhà (Host List)" as VIEW_LIST
+    usecase "Cấp tài khoản mới (Create Host)" as CREATE_HOST
+    usecase "Gửi Email thông tin đăng nhập" as SEND_MAIL
+    usecase "Khóa tài khoản (Lock Account)" as LOCK_HOST
+    usecase "Nhập lý do Khóa" as REASON
+    usecase "Ẩn tất cả tin đăng liên quan" as HIDE_POSTS
+}
+
+Admin -- UC07
+
+UC07 ..> VIEW_LIST : <<include>>
+UC07 <.. CREATE_HOST : <<extend>>
+UC07 <.. LOCK_HOST : <<extend>>
+
+CREATE_HOST ..> SEND_MAIL : <<include>>
+
+LOCK_HOST ..> REASON : <<include>>
+LOCK_HOST ..> HIDE_POSTS : <<include>>
+
+note right of HIDE_POSTS
+  Force Soft Delete:
+  Tự động ẩn mọi bài viết của Host
+  ngay sau khi bị Ban/Lock.
+end note
+
+note bottom of SEND_MAIL
+  Bắn mail SMTP chứa
+  Username/Password cho Host.
+end note
+
+@enduml

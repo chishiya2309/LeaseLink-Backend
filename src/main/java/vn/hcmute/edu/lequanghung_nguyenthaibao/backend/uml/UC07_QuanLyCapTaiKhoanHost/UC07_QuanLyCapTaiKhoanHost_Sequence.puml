@@ -1,0 +1,50 @@
+@startuml
+skinparam actorStyle awesome
+autonumber
+
+actor Admin
+participant "HostManagementView\n(React)" as FE
+participant "AdminUserController\n(Spring)" as Controller
+participant "UserService" as UserService
+participant "UserRepo" as UserRepo
+database "PostgreSQL" as DB
+participant "MailService" as Mail
+participant "PropertyService" as PropertyService
+
+== Cấp Account Mới ==
+Admin -> FE : Nhập Data & Click "Submit"
+FE -> Controller : POST /admin/users/create-host
+Controller -> UserService : createHost(dto)
+UserService -> UserRepo : existsByEmail(email)
+UserRepo -> DB : SELECT
+UserService -> UserRepo : existsByPhone(phone)
+UserRepo -> DB : SELECT
+alt Thành công
+    UserService -> UserRepo : save(new HostEntity)
+    UserRepo -> DB : INSERT
+    UserService -> Mail : sendWelcomeEmail(email, password)
+    UserService --> Controller : UserDetails
+    Controller --> FE : 201 Created
+    FE --> Admin : Thông báo Thành công & Link Email
+else Thất bại (Trùng lặp)
+    UserService --> Controller : ConflictException
+    Controller --> FE : 409 Conflict
+    FE --> Admin : Báo lỗi "Email/SĐT đã tồn tại"
+end
+
+== Khóa / Ban Host ==
+Admin -> FE : Click "Ban" + Nhập lý do
+FE -> Controller : POST /admin/users/lock/{id} (reason)
+Controller -> UserService : lockUser(id, reason)
+UserService -> UserRepo : findById(id)
+UserService -> UserRepo : setStatus(id, LOCKED)
+UserRepo -> DB : UPDATE users SET active=false
+UserService -> UserService : invalidateSessions(id)
+note right: Xóa Cookie/JWT\ntrên toàn hệ thống
+UserService -> PropertyService : hideAllPropertiesByOwner(id)
+PropertyService -> DB : UPDATE properties SET status='HIDDEN'\nWHERE owner_id = id
+UserService --> Controller : void
+Controller --> FE : 200 OK
+FE --> Admin : Thông báo "Account & Bài viết\nđã được xử lý"
+
+@enduml
