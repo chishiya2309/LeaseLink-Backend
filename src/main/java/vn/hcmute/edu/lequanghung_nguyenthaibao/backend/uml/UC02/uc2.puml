@@ -1,22 +1,32 @@
 @startuml
-'https://plantuml.com/use-case-diagram
+left to right direction
+skinparam packageStyle rectangle
 
-:Main Admin: as Admin
-(Use the application) as (Use)
+actor "Chủ nhà\n(Host)" as host
 
-User -> (Start)
-User --> (Use)
+package "Quản lý tin đăng bất động sản (UC02)" {
+    usecase "Thêm tin đăng mới" as UC_Create
+    usecase "Cập nhật tin đăng" as UC_Update
+    usecase "Ẩn/Xóa tin đăng" as UC_Delete
 
-Admin ---> (Use)
+    usecase "Xác thực dữ liệu & File ảnh\n(Validation)" as UC_Validate
+    usecase "Chuyển trạng thái\nChờ duyệt (PENDING)" as UC_SetPending
+    usecase "Hiển thị lỗi nhập liệu" as UC_Error
+}
 
-note right of Admin : This is an example.
+' Các thao tác chính của Actor
+host --> UC_Create
+host --> UC_Update
+host --> UC_Delete
 
-note right of (Use)
-A note can also
-be on several lines
-end note
+' Các mối quan hệ Include (Bắt buộc phải có)
+UC_Create ..> UC_Validate : <<include>>
+UC_Update ..> UC_Validate : <<include>>
 
-note "This note is connected\nto several objects." as N2
-(Start) .. N2
-N2 .. (Use)
+UC_Create ..> UC_SetPending : <<include>>
+UC_Update ..> UC_SetPending : <<include>>
+
+' Các mối quan hệ Extend (Luồng ngoại lệ)
+UC_Error .up.> UC_Validate : <<extend>>\n[Thiếu thông tin/Sai định dạng ảnh]
+
 @enduml

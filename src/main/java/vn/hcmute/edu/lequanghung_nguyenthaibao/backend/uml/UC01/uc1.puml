@@ -1,22 +1,33 @@
 @startuml
-'https://plantuml.com/use-case-diagram
+left to right direction
+skinparam packageStyle rectangle
 
-:Main Admin: as Admin
-(Use the application) as (Use)
+actor "Khách vãng lai\n(Guest)" as guest
+actor "Chủ nhà\n(Host)" as host
+actor "Quản trị viên\n(Admin)" as admin
 
-User -> (Start)
-User --> (Use)
+package "Hệ thống Bất Động Sản (UC01)" {
+    usecase "Đăng ký Chủ nhà" as UC_Register
+    usecase "Đăng nhập" as UC_Login
 
-Admin ---> (Use)
+    usecase "Xác thực danh tính\n(Check DB & Hash)" as UC_Auth
+    usecase "Kiểm tra trạng thái\n(Role & Status)" as UC_CheckStatus
 
-note right of Admin : This is an example.
+    usecase "Hiển thị lỗi\n(Sai pass/Bị khóa/Chờ duyệt)" as UC_ShowError
+}
 
-note right of (Use)
-A note can also
-be on several lines
-end note
+' Định nghĩa các luồng tương tác của Actor
+guest --> UC_Register
+host --> UC_Login
+admin --> UC_Login
 
-note "This note is connected\nto several objects." as N2
-(Start) .. N2
-N2 .. (Use)
+' Các mối quan hệ Include (Bắt buộc phải có)
+UC_Login ..> UC_Auth : <<include>>
+UC_Login ..> UC_CheckStatus : <<include>>
+UC_Register ..> UC_Auth : <<include>> (Validation)
+
+' Các mối quan hệ Extend (Luồng ngoại lệ)
+UC_ShowError .up.> UC_Login : <<extend>>\n[Nếu lỗi validation/trạng thái]
+UC_ShowError .up.> UC_Register : <<extend>>\n[Nếu trùng Email/Sai pass]
+
 @enduml

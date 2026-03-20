@@ -1,22 +1,30 @@
 @startuml
-'https://plantuml.com/use-case-diagram
+left to right direction
+skinparam packageStyle rectangle
 
-:Main Admin: as Admin
-(Use the application) as (Use)
+actor "Khách truy cập\n(Guest)" as guest
 
-User -> (Start)
-User --> (Use)
+package "Tìm kiếm và lọc cơ bản (UC03)" {
+    usecase "Nhập từ khóa tìm kiếm" as UC_Search
+    usecase "Thiết lập bộ lọc\n(Khu vực, Giá, Loại BĐS...)" as UC_Filter
+    usecase "Truy vấn CSDL\n(Chỉ lấy tin APPROVED)" as UC_Query
 
-Admin ---> (Use)
+    usecase "Phân trang kết quả" as UC_Paginate
+    usecase "Hiển thị thông báo rỗng\n(& Gợi ý AI)" as UC_Empty
+    usecase "Hiển thị tất cả tin mới nhất" as UC_All
+}
 
-note right of Admin : This is an example.
+' Thao tác của Actor
+guest --> UC_Search
+guest --> UC_Filter
 
-note right of (Use)
-A note can also
-be on several lines
-end note
+' Mối quan hệ Include (Bắt buộc)
+UC_Search ..> UC_Query : <<include>>
+UC_Filter ..> UC_Query : <<include>>
 
-note "This note is connected\nto several objects." as N2
-(Start) .. N2
-N2 .. (Use)
+' Mối quan hệ Extend (Luồng ngoại lệ / Mở rộng)
+UC_Paginate .up.> UC_Query : <<extend>>\n[Dữ liệu trả về nhiều]
+UC_Empty .up.> UC_Query : <<extend>>\n[0 matches]
+UC_All .up.> UC_Query : <<extend>>\n[Để trống tìm kiếm]
+
 @enduml
