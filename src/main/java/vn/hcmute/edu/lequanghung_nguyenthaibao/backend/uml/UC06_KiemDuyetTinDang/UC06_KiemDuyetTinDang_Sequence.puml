@@ -1,0 +1,65 @@
+@startuml
+skinparam actorStyle awesome
+autonumber
+
+actor Admin
+participant "ApprovalListView\n(FE)" as FE
+participant "ModerationController\n(Java)" as Controller
+participant "PropertyService\n(Java)" as Service
+participant "PropertyRepository\n(JPA)" as Repo
+database "PostgreSQL" as DB
+participant "AuditLogService" as Audit
+participant "NotificationService" as Notify
+
+== Tải Hàng đợi (FIFO) ==
+Admin -> FE : Click "Duyệt Bài"
+FE -> Controller : GET /moderation/queue
+Controller -> Service : getPendingQueue()
+Service -> Repo : findByStatus('PENDING', Sort.ASC)
+Repo -> DB : SELECT * FROM properties WHERE status='PENDING' ORDER BY created_at ASC
+DB --> Repo : List<Property>
+Repo --> Service : List<Property>
+Service --> Controller : ResponseDTO
+Controller --> FE : JSON List
+FE --> Admin : Hiển thị bảng danh sách
+
+== Thẩm định chi tiết ==
+Admin -> FE : Click Xem chi tiết bài ID: 123
+FE -> Controller : GET /moderation/detail/123
+Controller -> Service : getModerationDetail(123)
+Service -> Repo : findById(123)
+Repo -> DB : SELECT
+DB --> Repo : Property Object
+Repo --> Service : entity
+Service --> Controller : ModerationDetailDTO
+Controller --> FE : JSON Detail
+FE --> Admin : Hiển thị Mockup Guest View
+
+== Quyết định Kiểm duyệt ==
+alt Phê duyệt (Approve)
+    Admin -> FE : Click "✅ Duyệt (Approve)"
+    FE -> Controller : POST /moderation/approve/123
+    Controller -> Service : approveProperty(123, admin_id)
+    Service -> Repo : updateStatus(123, 'APPROVED')
+    Repo -> DB : UPDATE properties SET status='APPROVED'
+    Service -> Audit : logAction(admin_id, 123, 'APPROVE')
+    Service -> Notify : sendNotification(host_id, "Tin của bạn đã được duyệt")
+    Service --> Controller : Success
+    Controller --> FE : 200 OK
+    FE --> Admin : Toast: "Duyệt thành công"
+else Từ chối (Reject)
+    Admin -> FE : Click "❌ Từ chối (Reject)"
+    FE --> Admin : Hiển thị Reason Dialog
+    Admin -> FE : Nhập/Chọn "Lý do: Đăng sai sự thật"
+    FE -> Controller : POST /moderation/reject/123 (Body: reason)
+    Controller -> Service : rejectProperty(123, admin_id, reason)
+    Service -> Repo : updateStatus(123, 'REJECTED', reason)
+    Repo -> DB : UPDATE properties SET status='REJECTED', reason_message=...
+    Service -> Audit : logAction(admin_id, 123, 'REJECT', reason)
+    Service -> Notify : sendNotification(host_id, "Tin bị từ chối: " + reason)
+    Service --> Controller : Success
+    Controller --> FE : 200 OK
+    FE --> Admin : Toast: "Đã gửi phản hồi từ chối"
+end
+
+@enduml
