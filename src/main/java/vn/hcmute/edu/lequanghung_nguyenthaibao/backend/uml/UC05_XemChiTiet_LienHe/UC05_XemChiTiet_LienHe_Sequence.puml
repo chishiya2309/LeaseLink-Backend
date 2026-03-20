@@ -1,0 +1,67 @@
+@startuml
+title UC05: Sequence Diagram - Xem chi tiết và Liên hệ
+
+actor "Guest (Khách thuê)" as Guest
+participant "Frontend (React)" as FE
+participant "PropertyController" as Controller
+participant "PropertyService" as Service
+participant "PropertyRepository" as Repo
+database "PostgreSQL" as DB
+
+== Xem chi tiết bất động sản ==
+
+Guest -> FE : Click vào thẻ bài đăng
+FE -> Controller : GET /api/properties/{id}
+activate Controller
+
+Controller -> Service : getPropertyDetails(id)
+activate Service
+
+Service -> Repo : findById(id)
+activate Repo
+Repo -> DB : SELECT * FROM properties WHERE id=?
+DB --> Repo : Dữ liệu bài đăng
+Repo --> Service : Property Entity
+deactivate Repo
+
+Service -> Service : Kiểm tra trạng thái\n(State Pattern)
+
+alt Bài đăng Approved/Hiển thị
+    Service --> Controller : PropertyDetailsDTO
+    Controller --> FE : 200 OK (Data)
+    FE --> Guest : Hiển thị trang Chi tiết
+else Bài đăng Hidden/Deleted
+    Service --> Controller : PropertyNotFoundException
+    Controller --> FE : 404 Not Found
+    FE --> Guest : Hiển thị lỗi: "Tin không khả dụng"
+end
+
+deactivate Service
+deactivate Controller
+
+== Liên hệ chủ nhà (Gửi tin nhắn) ==
+
+Guest -> FE : Nhập tin nhắn & nhấn "Gửi"
+FE -> Controller : POST /api/messages
+activate Controller
+
+Controller -> Service : sendMessage(messageDTO)
+activate Service
+
+Service -> Repo : save(message)
+activate Repo
+Repo -> DB : INSERT INTO messages ...
+DB --> Repo : Success
+Repo --> Service : Saved Message
+deactivate Repo
+
+note right of Service : Trigger Observer Pattern\nđể thông báo cho Chủ nhà
+
+Service --> Controller : Success DTO
+Controller --> FE : 201 Created
+deactivate Service
+
+FE --> Guest : Thông báo: "Gửi tin nhắn thành công"
+deactivate Controller
+
+@enduml
