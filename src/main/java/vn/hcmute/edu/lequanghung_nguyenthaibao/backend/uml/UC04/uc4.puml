@@ -1,22 +1,32 @@
 @startuml
-'https://plantuml.com/use-case-diagram
+left to right direction
+skinparam packageStyle rectangle
 
-:Main Admin: as Admin
-(Use the application) as (Use)
+actor "Khách truy cập\n(Guest)" as guest
 
-User -> (Start)
-User --> (Use)
+package "Tìm kiếm thông minh bằng AI (UC04)" {
+    usecase "Nhập yêu cầu bằng văn bản tự nhiên" as UC_Input
+    usecase "Kiểm tra giới hạn lượt chat\n(Rate-limit)" as UC_CheckLimit
 
-Admin ---> (Use)
+    usecase "Phân tích NLP & Trích xuất JSON\n(Gọi API AI LLM)" as UC_Analyze
+    usecase "Truy vấn CSDL\n(Semantic Vector Search)" as UC_Query
+    usecase "Hiển thị phản hồi & Gợi ý BĐS" as UC_Display
 
-note right of Admin : This is an example.
+    usecase "Yêu cầu làm rõ nội dung\n(Lỗi Intent)" as UC_ErrorIntent
+    usecase "Chuyển hướng Tìm kiếm cơ bản\n(Lỗi API Server)" as UC_Fallback
+}
 
-note right of (Use)
-A note can also
-be on several lines
-end note
+' Tương tác của Actor
+guest --> UC_Input
 
-note "This note is connected\nto several objects." as N2
-(Start) .. N2
-N2 .. (Use)
+' Các mối quan hệ Include (Bắt buộc theo luồng chính)
+UC_Input ..> UC_CheckLimit : <<include>>
+UC_Input ..> UC_Analyze : <<include>>
+UC_Analyze ..> UC_Query : <<include>>
+UC_Query ..> UC_Display : <<include>>
+
+' Các mối quan hệ Extend (Luồng ngoại lệ)
+UC_ErrorIntent .up.> UC_Analyze : <<extend>>\n[Văn bản không rõ ràng]
+UC_Fallback .up.> UC_Analyze : <<extend>>\n[Mất kết nối AI API]
+
 @enduml
