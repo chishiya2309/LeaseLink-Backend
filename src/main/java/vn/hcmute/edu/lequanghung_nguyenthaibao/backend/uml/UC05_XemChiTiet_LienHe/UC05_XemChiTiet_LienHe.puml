@@ -1,0 +1,27 @@
+@startuml
+skinparam actorStyle awesome
+
+actor "Guest (Khách thuê)" as Guest
+
+package "LeaseLink Marketplace" {
+    usecase "UC05: Xem chi tiết bất động sản\n(View Property Details)" as UC05
+    usecase "Liên hệ chủ nhà\n(Contact Host)" as UC05_Contact
+    usecase "Hiển thị thông báo tin không khả dụng\n(Display 'Not Available' Message)" as UC05_Error
+}
+
+Guest --> UC05
+
+UC05_Contact .up.> UC05 : <<extend>>
+UC05_Error .up.> UC05 : <<extend>>
+
+note right of UC05_Contact
+  Triggered if Guest 
+  is interested
+end note
+
+note right of UC05_Error
+  Triggered if property is 
+  hidden or deleted (Alt Flow 5a)
+end note
+
+@enduml
