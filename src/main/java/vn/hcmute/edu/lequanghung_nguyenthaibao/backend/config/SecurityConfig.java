@@ -38,6 +38,9 @@ public class SecurityConfig {
                         // Mở các endpoint không cần đăng nhập
                         .requestMatchers(HttpMethod.POST, "/users/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users/forgot-password").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users/verify-reset-code").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users/reset-password").permitAll()
 
 
                         // Tất cả các request khác đều phải đăng nhập

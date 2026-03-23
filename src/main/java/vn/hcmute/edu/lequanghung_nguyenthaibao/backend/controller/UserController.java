@@ -7,9 +7,13 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
-import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.LoginResponse;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.ForgotPasswordRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.ResetPasswordRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.UserLoginRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.UserRegisterRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.VerifyResetCodeRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.LoginResponse;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.ResetPasswordVerifyResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.UserService;
 
 import java.util.LinkedHashMap;
@@ -48,6 +52,39 @@ public class UserController {
         result.put("status", HttpStatus.OK.value());
         result.put("message", "Đăng nhập thành công!");
         result.put("data", loginResponse);
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<Map<String, Object>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        userService.forgotPassword(request);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", HttpStatus.OK.value());
+        result.put("message", "Nếu email tồn tại trong hệ thống, chúng tôi đã gửi mã xác thực.");
+        result.put("data", "");
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
+    @PostMapping("/verify-reset-code")
+    public ResponseEntity<Map<String, Object>> verifyResetCode(@Valid @RequestBody VerifyResetCodeRequest request) {
+        ResetPasswordVerifyResponse response = userService.verifyResetCode(request);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", HttpStatus.OK.value());
+        result.put("message", "Xác thực mã thành công.");
+        result.put("data", response);
+        return new ResponseEntity<>(result, HttpStatus.OK);
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<Map<String, Object>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(request);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", HttpStatus.OK.value());
+        result.put("message", "Đặt lại mật khẩu thành công.");
+        result.put("data", "");
         return new ResponseEntity<>(result, HttpStatus.OK);
     }
 

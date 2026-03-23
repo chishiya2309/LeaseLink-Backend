@@ -6,22 +6,34 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.util.JwtUtil;
-import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.LoginResponse;
-import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.UserResponse;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.config.BrevoProperties;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.ForgotPasswordRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.ResetPasswordRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.UserLoginRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.UserRegisterRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.VerifyResetCodeRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.LoginResponse;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.ResetPasswordVerifyResponse;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.UserResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.exception.AccountLockedException;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.exception.InvalidCredentialsException;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.exception.ResourceAlreadyExistsException;
-import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.*;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.AuthSession;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.PasswordResetToken;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.RefreshToken;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.RevokedJti;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.Role;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.User;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.enums.UserStatus;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.AuthSessionRepository;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.PasswordResetTokenRepository;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.RefreshTokenRepository;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.RevokedJtiRepository;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.RoleRepository;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.UserRepository;
-import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.RevokedJtiRepository;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.EmailService;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.UserService;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.util.JwtUtil;
 
 import java.security.SecureRandom;
 import java.time.OffsetDateTime;
@@ -42,6 +54,9 @@ public class UserServiceImpl implements UserService {
     private final AuthSessionRepository authSessionRepository;
     private final RefreshTokenRepository refreshTokenRepository;
     private final RevokedJtiRepository revokedJtiRepository;
+    private final PasswordResetTokenRepository passwordResetTokenRepository;
+    private final EmailService emailService;
+    private final BrevoProperties brevoProperties;
 
     @Override
     public List<UserResponse> findAll() {
@@ -113,7 +128,6 @@ public class UserServiceImpl implements UserService {
         user.setLastLoginAt(OffsetDateTime.now());
         userRepository.save(user);
 
-        // 6. Tạo AuthSession (Ghi nhận lần đăng nhập thiết bị này)
         AuthSession session = new AuthSession();
         session.setUser(user);
         session.setIsActive(true);
@@ -125,14 +139,11 @@ public class UserServiceImpl implements UserService {
         }
         session = authSessionRepository.save(session);
 
-        // 7. Sinh Refresh Token dài hạn lưu Database
         String plainRefreshToken = generateRandomTokenString();
         RefreshToken refreshTokenEntity = new RefreshToken();
         refreshTokenEntity.setSession(session);
         refreshTokenEntity.setUser(user);
         refreshTokenEntity.setJti(UUID.randomUUID());
-        // Mật khẩu có lưu dưới DB nhưng refresh token cần hash (bảo mật thêm 1 lớp)
-        // tương tự password. Cách nhanh là dùng passwordEncoder
         refreshTokenEntity.setTokenHash(passwordEncoder.encode(plainRefreshToken));
         refreshTokenEntity.setExpiresAt(OffsetDateTime.now().plus(7, ChronoUnit.DAYS));
         refreshTokenRepository.save(refreshTokenEntity);
@@ -146,36 +157,137 @@ public class UserServiceImpl implements UserService {
         userDto.setStatus(user.getStatus());
         userDto.setRole(selectedRole);
 
-        // 10. Đóng gói kết quả gửi về Client
         return LoginResponse.builder()
                 .accessToken(accessToken)
-                .refreshToken(plainRefreshToken) // Trả Plain cho Client cất.
+                .refreshToken(plainRefreshToken)
                 .user(userDto)
                 .build();
     }
 
-    private String generateRandomTokenString() {
-        SecureRandom random = new SecureRandom();
-        byte[] bytes = new byte[32]; // 256 bits
-        random.nextBytes(bytes);
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
-    }
-
+    @Override
     @Transactional
     public void logout(String jti, UUID sessionId, UUID userId) {
-        // 1. Lưu JTI vào danh sách đen (Blacklist) để Access Token không còn dùng được
         RevokedJti revokedJti = new RevokedJti();
         revokedJti.setJti(UUID.fromString(jti));
         revokedJti.setUser(userRepository.getReferenceById(userId));
         revokedJti.setTokenType("access");
-        revokedJti.setExpiresAt(OffsetDateTime.now().plus(1, ChronoUnit.HOURS)); // Khớp với hạn của Access Token
+        revokedJti.setExpiresAt(OffsetDateTime.now().plus(1, ChronoUnit.HOURS));
         revokedJtiRepository.save(revokedJti);
 
-        // 2. Thu hồi Refresh Token liên quan đến Session này
         authSessionRepository.findById(sessionId).ifPresent(session -> {
             session.setIsActive(false);
             authSessionRepository.save(session);
             refreshTokenRepository.revokeBySessionId(sessionId, "User logged out");
         });
+    }
+
+    @Override
+    @Transactional
+    public void forgotPassword(ForgotPasswordRequest request) {
+        userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
+            OffsetDateTime now = OffsetDateTime.now();
+            passwordResetTokenRepository.consumeAllActiveByUser(user, now);
+
+            String otpCode = generateOtpCode();
+            PasswordResetToken token = new PasswordResetToken();
+            token.setUser(user);
+            token.setEmailSnapshot(user.getEmail());
+            token.setOtpHash(passwordEncoder.encode(otpCode));
+            token.setExpiresAt(now.plusMinutes(brevoProperties.getResetCodeExpiryMinutes()));
+            passwordResetTokenRepository.save(token);
+
+            emailService.sendPasswordResetOtp(
+                    user.getEmail(),
+                    user.getFullName(),
+                    otpCode,
+                    brevoProperties.getResetCodeExpiryMinutes()
+            );
+
+            log.info("Đã tạo password reset OTP cho email {}", user.getEmail());
+        });
+    }
+
+    @Override
+    @Transactional
+    public ResetPasswordVerifyResponse verifyResetCode(VerifyResetCodeRequest request) {
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("Mã xác thực không hợp lệ hoặc đã hết hạn."));
+
+        PasswordResetToken token = passwordResetTokenRepository
+                .findFirstByUserAndConsumedAtIsNullOrderByCreatedAtDesc(user)
+                .orElseThrow(() -> new IllegalArgumentException("Mã xác thực không hợp lệ hoặc đã hết hạn."));
+
+        OffsetDateTime now = OffsetDateTime.now();
+        if (token.getExpiresAt().isBefore(now)) {
+            token.setConsumedAt(now);
+            passwordResetTokenRepository.save(token);
+            throw new IllegalArgumentException("Mã xác thực không hợp lệ hoặc đã hết hạn.");
+        }
+
+        if (!passwordEncoder.matches(request.getCode(), token.getOtpHash())) {
+            int nextAttemptCount = token.getAttemptCount() + 1;
+            token.setAttemptCount(nextAttemptCount);
+
+            if (nextAttemptCount >= brevoProperties.getMaxVerifyAttempts()) {
+                token.setConsumedAt(now);
+            }
+
+            passwordResetTokenRepository.save(token);
+            throw new IllegalArgumentException("Mã xác thực không hợp lệ hoặc đã hết hạn.");
+        }
+
+        String plainResetToken = generateRandomTokenString();
+        token.setVerifiedAt(now);
+        token.setResetTokenHash(passwordEncoder.encode(plainResetToken));
+        token.setExpiresAt(now.plusMinutes(brevoProperties.getResetTokenExpiryMinutes()));
+        token.setAttemptCount(0);
+        passwordResetTokenRepository.save(token);
+
+        return ResetPasswordVerifyResponse.builder()
+                .email(user.getEmail())
+                .resetToken(plainResetToken)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public void resetPassword(ResetPasswordRequest request) {
+        if (!request.getPassword().equals(request.getConfirmPassword())) {
+            throw new IllegalArgumentException("Xác nhận mật khẩu không khớp.");
+        }
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new IllegalArgumentException("Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn."));
+
+        PasswordResetToken token = passwordResetTokenRepository
+                .findFirstByUserAndConsumedAtIsNullAndVerifiedAtIsNotNullOrderByVerifiedAtDesc(user)
+                .orElseThrow(() -> new IllegalArgumentException("Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn."));
+
+        OffsetDateTime now = OffsetDateTime.now();
+        if (token.getExpiresAt().isBefore(now) || token.getResetTokenHash() == null ||
+                !passwordEncoder.matches(request.getResetToken(), token.getResetTokenHash())) {
+            throw new IllegalArgumentException("Phiên đặt lại mật khẩu không hợp lệ hoặc đã hết hạn.");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(request.getPassword()));
+        userRepository.save(user);
+
+        token.setConsumedAt(now);
+        passwordResetTokenRepository.save(token);
+
+        authSessionRepository.deactivateAllByUser(user);
+        refreshTokenRepository.revokeAllByUser(user, "Password reset");
+    }
+
+    private String generateRandomTokenString() {
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[32];
+        random.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private String generateOtpCode() {
+        SecureRandom random = new SecureRandom();
+        return String.format("%06d", random.nextInt(1_000_000));
     }
 }

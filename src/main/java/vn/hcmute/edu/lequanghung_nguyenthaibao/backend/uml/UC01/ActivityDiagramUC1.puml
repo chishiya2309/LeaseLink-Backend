@@ -4,61 +4,84 @@ skinparam ActivityBackgroundColor #FEFECE
 skinparam ActivityBorderColor #A80036
 
 start
-:Người dùng truy cập hệ thống;
+:Người dùng truy cập trang xác thực;
 
 if (Lựa chọn chức năng?) then (Đăng nhập)
-    :Hệ thống hiển thị Form Đăng nhập;
-    :Người dùng nhập Email & Mật khẩu;
+    :Hệ thống hiển thị form Đăng nhập;
+    :Người dùng nhập Email, Mật khẩu, chọn Role;
 
-    if (Bỏ trống thông tin? [Ngoại lệ A1]) then (Có)
-        :Hiển thị lỗi "Không được bỏ trống";
+    if (Frontend validation sai?) then (Có)
+        :Hiển thị lỗi validate;
         stop
     else (Không)
-        :Truy vấn CSDL & Đối chiếu Hash;
+        :Gửi POST /users/login;
+        :Tim user theo email;
 
-        if (Thông tin chính xác? [Ngoại lệ A2]) then (Sai)
-            :Báo lỗi "Tài khoản hoặc mật khẩu không chính xác";
+        if (Không tìm thấy user?) then (Có)
+            :Trả lời "Tài khoản hoặc mật khẩu không chính xác";
             stop
-        else (Đúng)
-            if (Trạng thái tài khoản?) then (pending [Ngoại lệ A3])
-                :Báo lỗi "Tài khoản đang chờ duyệt";
+        else (Không)
+            :Đối chiếu passwordHash;
+
+            if (Password sai?) then (Có)
+                :Trả lời "Tài khoản hoặc mật khẩu không chính xác";
                 stop
-            elseif (Trạng thái tài khoản?) then (locked [Ngoại lệ A4])
-                :Báo lỗi "Tài khoản bị khóa";
-                stop
-            else (active)
-                :Tạo Session / JWT Token;
-                :Chuyển hướng đến Dashboard tương ứng;
-                stop
+            else (Không)
+                if (Status = LOCKED?) then (Có)
+                    :Trả lời "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin để hỗ trợ.";
+                    stop
+                else (Không)
+                    :Kiểm tra role được chọn có tồn tại trong user.roles;
+
+                    if (Role không hợp lệ?) then (Có)
+                        :Tra loi "Tài khoản không có quyền truy cập với vai trò này";
+                        stop
+                    else (Không)
+                        :Cập nhật last_login_at;
+                        :Tạo AuthSession;
+                        :Sinh Refresh Token và lưu DB;
+                        :Sinh Access Token;
+                        :Trả về accessToken, refreshToken, user;
+                        :Frontend lưu token va chuyển hướng;
+                        stop
+                    endif
+                endif
             endif
         endif
     endif
 
-else (Đăng ký Chủ nhà)
-    :Hệ thống hiển thị Form Đăng ký;
-    :Người dùng nhập Thông tin (Tên, Email, SĐT, Mật khẩu, Xác nhận mật khẩu);
+else (Dang ky Host)
+    :He thong hien thi form Dang ky;
+    :Nguoi dung nhap Ho ten, Email, So dien thoai,\nMat khau, Xac nhan mat khau;
 
-    if (Pass & Confirm Pass không khớp? [Ngoại lệ B3]) then (Có)
-        :Báo lỗi "Xác nhận mật khẩu không khớp";
+    if (Frontend validation sai?) then (Co)
+        :Hien thi loi validate;
         stop
-    else (Khớp)
-        :Kiểm tra Email trong CSDL;
+    else (Khong)
+        :Gui POST /users/register;
 
-        if (Email đã tồn tại? [Ngoại lệ B2]) then (Có)
-            :Báo lỗi "Email này đã được đăng ký";
+        if (Password va Confirm khong khop?) then (Co)
+            :Tra loi "Xac nhan mat khau khong khop";
             stop
-        else (Không)
-            :Kiểm tra Số điện thoại trong CSDL;
-            
-            if (SĐT đã tồn tại? [Ngoại lệ B5]) then (Có)
-                :Báo lỗi "Số điện thoại này đã được đăng ký";
+        else (Khong)
+            :Kiem tra email da ton tai;
+
+            if (Email da ton tai?) then (Co)
+                :Tra loi "Email nay da duoc dang ky";
                 stop
-            else (Không)
-                :Mã hóa mật khẩu (BCrypt);
-                :Gán Role HOST (mặc định);
-                :Lưu CSDL với status=PENDING;
-                :Thông báo "Đăng ký thành công, chờ duyệt";
-                stop
+            else (Khong)
+                :Kiem tra so dien thoai da ton tai;
+
+                if (So dien thoai da ton tai?) then (Co)
+                    :Tra loi "So dien thoai nay da duoc dang ky";
+                    stop
+                else (Khong)
+                    :Ma hoa mat khau bang BCrypt;
+                    :Gan role HOST;
+                    :Luu user voi status = PENDING;
+                    :Tra thong bao dang ky thanh cong;
+                    stop
+                endif
             endif
         endif
     endif
