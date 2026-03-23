@@ -15,3 +15,12 @@ logging:
     root: INFO
     web: INFO
     org.springframework.security: DEBUG
+
+aws:
+  s3:
+    bucket-name: leaselink-storage-bucket
+    region: ap-southeast-1  # (Singapore)
+  credentials:
+    access-key: ${ACCESS_KEY}
+    secret-key: ${SECRET_KEY}
+
