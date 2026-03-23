@@ -16,7 +16,7 @@ import org.springframework.context.annotation.Profile;
 import java.util.List;
 
 @Configuration
-@Profile({"dev", "test"})
+@Profile("dev")
 public class OpenApiConfig {
     @Bean
     public GroupedOpenApi publicApi(@Value("${openapi.service.api-docs}") String apiDocs) {
