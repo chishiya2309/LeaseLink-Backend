@@ -3,6 +3,8 @@ spring:
     name: backend-service
   profiles:
     active: @spring.profiles.active@
+  config:
+    import: optional:file:.env[.properties]
 
 management:
   endpoints:
