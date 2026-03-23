@@ -7,7 +7,7 @@
    - Cho phép người dùng mới đăng ký tài khoản để trở thành Chủ nhà (Host), chờ Admin phê duyệt.
 **4. Mô tả ngắn:**
    - **Đăng ký:** Người dùng nhập các thông tin cá nhân cơ bản để tạo tài khoản Chủ nhà mới. Tài khoản khi tạo xong sẽ mang trạng thái `pending` (chờ duyệt).
-   - **Đăng nhập:** Người dùng nhập thông tin tài khoản (Email, Mật khẩu) để đăng nhập vào trang quản trị (Dashboard). Tài khoản Chủ nhà phải được Admin chuyển sang trạng thái `active` mới có thể đăng nhập thành công.
+   - **Đăng nhập:** Người dùng nhập thông tin tài khoản (Email, Mật khẩu) để đăng nhập vào trang quản trị (Dashboard). Tài khoản Chủ nhà phải được Admin chuyển sang trạng thái `active` mới có thể tiến hành đăng tin.
 **5. Tiền điều kiện:**
    - **Đăng nhập:** Người dùng đã có tài khoản trên hệ thống. Trạng thái hiện tại là chưa đăng nhập.
    - **Đăng ký:** Người dùng truy cập vào trang đăng ký với tư cách khách (Guest), và sử dụng Email chưa từng tồn tại trên hệ thống.
@@ -37,7 +37,7 @@
   4. Người dùng nhấn nút "Đăng ký".
   5. Hệ thống kiểm tra tính hợp lệ của dữ liệu (Email định dạng chuẩn, Mật khẩu khớp nhau và đủ mạnh, Email chưa tồn tại).
   6. Hệ thống tiến hành mã hoá mật khẩu (hash) và tạo mới bản ghi người dùng vào CSDL với `role` = `HOST` và `status` = `pending`.
-  7. Hệ thống hiển thị thông báo: "Đăng ký thành công! Tài khoản của bạn đang ở trạng thái chờ duyệt. Vui lòng đợi Admin xác nhận trước khi đăng nhập."
+  7. Hệ thống hiển thị thông báo: "Đăng ký thành công! Tài khoản của bạn đang ở trạng thái chờ duyệt. Admin xác nhận thì bạn mới được đăng tin nhé."
 
 **9. Luồng ngoại lệ (Exception Flow):**
 
@@ -69,4 +69,4 @@
 **12. Đặc tả lớp MVC cho usecase:**
   - **View:** `LoginView`, `RegisterView` (Các giao diện Form tương tác với Guest).
   - **Controller:** `AuthController` (Xử lý các logic đăng nhập, đăng ký, bắt lỗi dữ liệu đầu vào, quản lý Session).
-  - **Model:** `UserModel` (DAO cho bảng `users`: Thêm mới user, truy vấn thông tin user qua email, xác minh mật khẩu...).
+  - **Model:** `User` (repository cho bảng `users`: Thêm mới user, truy vấn thông tin user qua email, xác minh mật khẩu...).

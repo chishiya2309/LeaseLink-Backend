@@ -7,6 +7,8 @@ import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
@@ -33,16 +35,23 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
-                        // Mở endpoint đăng ký user, không cần đăng nhập
+                        // Mở các endpoint không cần đăng nhập
                         .requestMatchers(HttpMethod.POST, "/users/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users/forgot-password").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users/verify-reset-code").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users/reset-password").permitAll()
 
-                        // Mở cửa tự do cho API test
-                        .requestMatchers("/api/hello").permitAll()
 
                         // Tất cả các request khác đều phải đăng nhập
                         .anyRequest().authenticated()
                 );
 
         return http.build();
+    }
+
+    @Bean
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder(12);
     }
 }

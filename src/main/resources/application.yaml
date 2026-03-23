@@ -26,3 +26,13 @@ aws:
     access-key: ${ACCESS_KEY}
     secret-key: ${SECRET_KEY}
 
+brevo:
+  api-key: ${BREVO_API_KEY}
+  base-url: ${BREVO_BASE_URL:https://api.brevo.com}
+  sender-email: ${BREVO_SENDER_EMAIL}
+  sender-name: ${BREVO_SENDER_NAME}
+  sandbox: ${BREVO_SANDBOX}
+  reset-code-expiry-minutes: ${RESET_CODE_EXPIRY_MINUTES}
+  reset-token-expiry-minutes: ${RESET_TOKEN_EXPIRY_MINUTES}
+  max-verify-attempts: ${RESET_MAX_VERIFY_ATTEMPTS}
+

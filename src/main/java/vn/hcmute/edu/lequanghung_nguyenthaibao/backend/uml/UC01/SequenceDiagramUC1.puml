@@ -2,92 +2,153 @@
 autonumber
 skinparam SequenceMessageAlign center
 
-actor "Host/Admin/Guest" as User
-participant "LoginView\n/ RegisterView" as View
-participant "AuthController" as Ctrl
-participant "UserModel\n(DAO)" as Model
+actor "Người dùng" as User
+participant "LoginPage /\nRegisterPage" as View
+participant "UserController" as Ctrl
+participant "UserServiceImpl" as Service
+participant "UserRepository" as UserRepo
+participant "RoleRepository" as RoleRepo
+participant "AuthSessionRepository" as SessionRepo
+participant "RefreshTokenRepository" as RefreshRepo
+participant "PasswordEncoder" as Encoder
+participant "JwtUtil" as JwtUtil
 database "Database" as DB
 
-== Khởi tạo chức năng ==
-User -> View: Truy cập trang Đăng nhập / Đăng ký
-View --> User: Hiển thị Form tương ứng
+== Luồng đăng ký host ==
+User -> View: Mở trang Đăng ký
+View --> User: Hiển thị form
 
-== Luồng 8.1 & 9.1: Đăng nhập ==
-User -> View: Nhập Email & Mật khẩu
-User -> View: Nhấn nút "Đăng nhập"
+User -> View: Nhập fullName, email, phone,\npassword, confirmPassword
+User -> View: Nhấn "Đăng ký"
+View -> View: Frontend validation
 
-View -> View: Kiểm tra định dạng (A1 - rỗng, rắc rối)
-activate View
-    note right: Nếu rỗng, hiển thị lỗi\ntrên View (A1)
-deactivate View
+alt Frontend validation fail
+    View --> User: Hiển thị lỗi cho người dùng tại form
+else Frontend validation ok
+    View -> Ctrl: POST /users/register
+    activate Ctrl
+        Ctrl -> Service: save(request)
+        activate Service
 
-View -> Ctrl: login(email, password)
-activate Ctrl
-    Ctrl -> Model: findUserByEmail(email)
-    activate Model
-        Model -> DB: SELECT * FROM users WHERE email=?
-        activate DB
-            DB --> Model: user_data (hashed_pass, status, role)
-        deactivate DB
-        Model --> Ctrl: user_data / null
-    deactivate Model
+            alt Password confirm không không khớp
+                Service --> Ctrl: throw IllegalArgumentException
+                Ctrl --> View: 400 Bad Request
+            else Password confirm hop le
+                Service -> UserRepo: existsByEmail(email)
+                activate UserRepo
+                    UserRepo -> DB: SELECT EXISTS BY email
+                    DB --> UserRepo: true / false
+                deactivate UserRepo
 
-    alt A2: Email không tồn tại hoặc mật khẩu sai
-        Ctrl -> Ctrl: Bcrypt.check(password, hashed_pass) (FAILED)
-        Ctrl --> View: Báo lỗi "Tài khoản hoặc mật khẩu không chính xác"
-    else Thông tin chính xác
-        Ctrl -> Ctrl: Bcrypt.check(password, hashed_pass) (SUCCESS)
+                alt Email đã tồn tại
+                    Service --> Ctrl: throw ResourceAlreadyExistsException
+                    Ctrl --> View: 400 Bad Request
+                else Email hợp lệ
+                    Service -> UserRepo: existsByPhone(phone)
+                    activate UserRepo
+                        UserRepo -> DB: SELECT EXISTS BY phone
+                        DB --> UserRepo: true / false
+                    deactivate UserRepo
 
-        alt A3: Tài khoản đang chờ duyệt
-            Ctrl -> Ctrl: Kiểm tra status == 'pending'
-            Ctrl --> View: Báo lỗi "Tài khoản đang chờ phê duyệt"
-        else A4: Tài khoản bị khóa
-            Ctrl -> Ctrl: Kiểm tra status == 'locked'
-            Ctrl --> View: Báo lỗi "Tài khoản của bạn đã bị khóa"
-        else active
-            Ctrl -> Ctrl: Kiểm tra status == 'active'
-            Ctrl -> Ctrl: Create Session / JWT Token (Quy tắc nghiệp vụ)
-            Ctrl --> View: Redirect đến Dashboard tương ứng (Role-based)
-        end
-    end
-deactivate Ctrl
+                    alt Số điện thoại đã tồn tại
+                        Service --> Ctrl: throw ResourceAlreadyExistsException
+                        Ctrl --> View: 400 Bad Request
+                    else Dữ liệu hợp lệ
+                        Service -> Encoder: encode(password)
+                        Encoder --> Service: passwordHash
 
-== Luồng 8.2 & 9.2: Đăng ký (Dành cho Chủ nhà) ==
-User -> View: Nhập Thông tin (Tên, Email, Pass, Confirm Pass...)
-User -> View: Nhấn nút "Đăng ký"
+                        Service -> RoleRepo: findByCode("HOST")
+                        activate RoleRepo
+                            RoleRepo -> DB: SELECT role HOST
+                            DB --> RoleRepo: role HOST
+                        deactivate RoleRepo
 
-View -> View: Kiểm tra (B1 - Thiếu/Định dạng,\nB3 - Pass không khớp)
-activate View
-    note right: Nếu lỗi, hiển thị lỗi\ntrên View (B1, B3)
-deactivate View
+                        Service -> UserRepo: save(user status=PENDING, role=HOST)
+                        activate UserRepo
+                            UserRepo -> DB: INSERT users, user_roles
+                            DB --> UserRepo: saved user
+                        deactivate UserRepo
 
-View -> Ctrl: register(full_name, email, pass, confirm_pass, phone)
-activate Ctrl
-    Ctrl -> Model: checkEmailExists(email)
-    activate Model
-        Model -> DB: SELECT COUNT(*) FROM users WHERE email=?
-        activate DB
-            DB --> Model: count
-        deactivate DB
-        Model --> Ctrl: count
-    deactivate Model
+                        Service --> Ctrl: userId
+                        Ctrl --> View: 201 Created
+                    end
+                end
+            end
+        deactivate Service
+    deactivate Ctrl
 
-    alt B2: Email trùng
-        Ctrl -> Ctrl: Kiểm tra count > 0
-        Ctrl --> View: Báo lỗi "Email này đã được đăng ký"
-    else Email chưa tồn tại
-        Ctrl -> Ctrl: Kiểm tra count == 0
-        Ctrl -> Ctrl: Bcrypt.hash(pass) (Quy tắc nghiệp vụ)
-        Ctrl -> Model: createUser(..., role='HOST', status='pending')
-        activate Model
-            Model -> DB: INSERT INTO users ...
-            activate DB
-                DB --> Model: success
-            deactivate DB
-            Model --> Ctrl: user_id / success
-        deactivate Model
-        Ctrl --> View: Thông báo "Đăng ký thành công, chờ Admin duyệt"
-    end
-deactivate Ctrl
+    View --> User: Thông báo đăng ký thành công, chờ admin duyệt và chuyển hướng trang đăng nhập
+end
+
+== Luồng đăng nhập ==
+User -> View: Mở trang Đăng nhập
+View --> User: Hiển thị form
+
+User -> View: Nhập email, password, role
+User -> View: Nhấn "Đăng nhập"
+View -> View: Frontend validation
+
+alt Frontend validation fail
+    View --> User: Hiển thị lỗi cho người dùng tại form
+else Frontend validation ok
+    View -> Ctrl: POST /users/login
+    activate Ctrl
+        Ctrl -> Service: login(request, httpRequest)
+        activate Service
+
+            Service -> UserRepo: findByEmail(email)
+            activate UserRepo
+                UserRepo -> DB: SELECT user by email
+                DB --> UserRepo: user / null
+            deactivate UserRepo
+
+            alt Không tìm thấy user
+                Service --> Ctrl: throw InvalidCredentialsException
+                Ctrl --> View: 400/401 error
+            else Tìm thấy user
+                Service -> Encoder: matches(password, passwordHash)
+                Encoder --> Service: true / false
+
+                alt Password sai
+                    Service --> Ctrl: throw InvalidCredentialsException
+                    Ctrl --> View: 400/401 error
+                else Password đúng
+                    alt User bị khóa
+                        Service --> Ctrl: throw AccountLockedException
+                        Ctrl --> View: 400/403 error
+                    else User hợp lệ
+                        Service -> Service: Kiểm tra role được chọn trong user.roles
+
+                        alt Role không thuộc user
+                            Service --> Ctrl: throw InvalidCredentialsException
+                            Ctrl --> View: 400/401 error
+                        else Role hợp lệ
+                            Service -> UserRepo: save(lastLoginAt)
+                            UserRepo -> DB: UPDATE users
+
+                            Service -> SessionRepo: save(AuthSession)
+                            SessionRepo -> DB: INSERT auth_sessions
+                            DB --> SessionRepo: saved session
+
+                            Service -> Encoder: encode(refreshToken)
+                            Encoder --> Service: refreshTokenHash
+
+                            Service -> RefreshRepo: save(RefreshToken)
+                            RefreshRepo -> DB: INSERT refresh_tokens
+
+                            Service -> JwtUtil: generateAccessToken(user, role, sessionId)
+                            JwtUtil --> Service: accessToken
+
+                            Service --> Ctrl: LoginResponse(accessToken, refreshToken, user)
+                            Ctrl --> View: 200 OK
+                        end
+                    end
+                end
+            end
+        deactivate Service
+    deactivate Ctrl
+
+    View --> User: Lưu token và chuyển hướng sang trang chủ/dashboard
+end
 
 @enduml

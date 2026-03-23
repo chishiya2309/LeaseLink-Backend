@@ -181,7 +181,7 @@ create table auth_sessions (
 
                                user_agent text,
 
-                               ip inet,
+                               ip varchar(45),
 
                                is_active boolean not null default true,
 
@@ -214,6 +214,32 @@ create table refresh_tokens (
                                 replaced_by_token_id uuid references refresh_tokens(id),
 
                                 revoke_reason varchar(120)
+
+);
+
+create table password_reset_tokens (
+
+                                       id uuid primary key default gen_random_uuid(),
+
+                                       user_id uuid not null references users(id) on delete cascade,
+
+                                       email_snapshot varchar(255) not null,
+
+                                       otp_hash text not null,
+
+                                       reset_token_hash text,
+
+                                       expires_at timestamptz not null,
+
+                                       verified_at timestamptz,
+
+                                       consumed_at timestamptz,
+
+                                       attempt_count integer not null default 0,
+
+                                       created_at timestamptz not null default now(),
+
+                                       updated_at timestamptz not null default now()
 
 );
 
@@ -272,6 +298,10 @@ create index idx_refresh_tokens_user_session on refresh_tokens(user_id, session_
 create index idx_refresh_tokens_expires on refresh_tokens(expires_at);
 
 create index idx_revoked_jtis_expires on revoked_jtis(expires_at);
+
+create index idx_password_reset_tokens_user_created on password_reset_tokens(user_id, created_at desc);
+
+create index idx_password_reset_tokens_expires on password_reset_tokens(expires_at);
 
 insert into roles(code, name)
 

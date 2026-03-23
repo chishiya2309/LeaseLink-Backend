@@ -144,7 +144,7 @@ create table auth_sessions (
   user_id uuid not null references users(id) on delete cascade,
   device_id varchar(120),
   user_agent text,
-  ip inet,
+  ip varchar(45),
   is_active boolean not null default true,
   created_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now(),
