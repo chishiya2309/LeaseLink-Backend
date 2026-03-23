@@ -1,7 +1,9 @@
 package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service;
 
-import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.reponse.UserResponse;
-import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.UserChangePasswordRequest;
+import jakarta.servlet.http.HttpServletRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.LoginResponse;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.UserResponse;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.UserLoginRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.UserRegisterRequest;
 
 import java.util.List;
@@ -16,7 +18,7 @@ public interface UserService {
 
     UUID save(UserRegisterRequest request);
 
-    void changePassword(UserChangePasswordRequest request);
+    LoginResponse login(UserLoginRequest request, HttpServletRequest httpServletRequest);
 
-    void delete(UUID id);
+    void logout(String jti, UUID sessionId, UUID userId);
 }

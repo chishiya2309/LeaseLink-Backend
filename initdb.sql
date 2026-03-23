@@ -181,7 +181,7 @@ create table auth_sessions (
 
                                user_agent text,
 
-                               ip inet,
+                               ip varchar(45),
 
                                is_active boolean not null default true,
 

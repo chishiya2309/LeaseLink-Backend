@@ -3,8 +3,8 @@ package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request;
 import lombok.Getter;
 
 @Getter
-public class UserChangePasswordRequest {
+public class UserLoginRequest {
     private String email;
     private String password;
-    private String confirmPassword;
+    private String role;
 }

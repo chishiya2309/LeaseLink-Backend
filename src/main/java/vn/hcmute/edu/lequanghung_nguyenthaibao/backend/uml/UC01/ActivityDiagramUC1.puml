@@ -36,22 +36,30 @@ if (Lựa chọn chức năng?) then (Đăng nhập)
 
 else (Đăng ký Chủ nhà)
     :Hệ thống hiển thị Form Đăng ký;
-    :Người dùng nhập Thông tin (Tên, Email, Pass...);
+    :Người dùng nhập Thông tin (Tên, Email, SĐT, Mật khẩu, Xác nhận mật khẩu);
 
-    if (Thiếu/Sai định dạng hoặc Pass không khớp? [Ngoại lệ B1, B3]) then (Có)
-        :Hiển thị lỗi trực tiếp trên Form;
+    if (Pass & Confirm Pass không khớp? [Ngoại lệ B3]) then (Có)
+        :Báo lỗi "Xác nhận mật khẩu không khớp";
         stop
-    else (Hợp lệ)
+    else (Khớp)
         :Kiểm tra Email trong CSDL;
 
         if (Email đã tồn tại? [Ngoại lệ B2]) then (Có)
             :Báo lỗi "Email này đã được đăng ký";
             stop
         else (Không)
-            :Mã hóa mật khẩu (Bcrypt/Argon2);
-            :Lưu CSDL với role=HOST, status=pending;
-            :Thông báo "Đăng ký thành công, chờ duyệt";
-            stop
+            :Kiểm tra Số điện thoại trong CSDL;
+            
+            if (SĐT đã tồn tại? [Ngoại lệ B5]) then (Có)
+                :Báo lỗi "Số điện thoại này đã được đăng ký";
+                stop
+            else (Không)
+                :Mã hóa mật khẩu (BCrypt);
+                :Gán Role HOST (mặc định);
+                :Lưu CSDL với status=PENDING;
+                :Thông báo "Đăng ký thành công, chờ duyệt";
+                stop
+            endif
         endif
     endif
 endif

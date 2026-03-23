@@ -22,7 +22,7 @@ public class AuthSession {
     @Column(name = "user_agent", columnDefinition = "TEXT")
     private String userAgent;
 
-    @Column(columnDefinition = "inet")
+    @Column(length = 45)
     private String ip;
 
     @Column(name = "is_active", nullable = false)

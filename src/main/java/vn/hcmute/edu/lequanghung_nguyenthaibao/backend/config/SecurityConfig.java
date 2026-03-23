@@ -35,11 +35,10 @@ public class SecurityConfig {
                                 "/webjars/**"
                         ).permitAll()
 
-                        // Mở endpoint đăng ký user, không cần đăng nhập
+                        // Mở các endpoint không cần đăng nhập
                         .requestMatchers(HttpMethod.POST, "/users/register").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users/login").permitAll()
 
-                        // Mở cửa tự do cho API test
-                        .requestMatchers("/api/hello").permitAll()
 
                         // Tất cả các request khác đều phải đăng nhập
                         .anyRequest().authenticated()

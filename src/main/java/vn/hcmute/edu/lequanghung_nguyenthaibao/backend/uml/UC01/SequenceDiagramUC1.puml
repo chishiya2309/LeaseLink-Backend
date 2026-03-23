@@ -4,90 +4,89 @@ skinparam SequenceMessageAlign center
 
 actor "Host/Admin/Guest" as User
 participant "LoginView\n/ RegisterView" as View
-participant "AuthController" as Ctrl
-participant "UserModel\n(DAO)" as Model
+participant "UserController" as Ctrl
+participant "UserServiceImpl" as Service
+participant "UserRepository" as Repos
+participant "RoleRepository" as RoleRepos
 database "Database" as DB
 
 == Khởi tạo chức năng ==
-User -> View: Truy cập trang Đăng nhập / Đăng ký
-View --> User: Hiển thị Form tương ứng
-
-== Luồng 8.1 & 9.1: Đăng nhập ==
-User -> View: Nhập Email & Mật khẩu
-User -> View: Nhấn nút "Đăng nhập"
-
-View -> View: Kiểm tra định dạng (A1 - rỗng, rắc rối)
-activate View
-    note right: Nếu rỗng, hiển thị lỗi\ntrên View (A1)
-deactivate View
-
-View -> Ctrl: login(email, password)
-activate Ctrl
-    Ctrl -> Model: findUserByEmail(email)
-    activate Model
-        Model -> DB: SELECT * FROM users WHERE email=?
-        activate DB
-            DB --> Model: user_data (hashed_pass, status, role)
-        deactivate DB
-        Model --> Ctrl: user_data / null
-    deactivate Model
-
-    alt A2: Email không tồn tại hoặc mật khẩu sai
-        Ctrl -> Ctrl: Bcrypt.check(password, hashed_pass) (FAILED)
-        Ctrl --> View: Báo lỗi "Tài khoản hoặc mật khẩu không chính xác"
-    else Thông tin chính xác
-        Ctrl -> Ctrl: Bcrypt.check(password, hashed_pass) (SUCCESS)
-
-        alt A3: Tài khoản đang chờ duyệt
-            Ctrl -> Ctrl: Kiểm tra status == 'pending'
-            Ctrl --> View: Báo lỗi "Tài khoản đang chờ phê duyệt"
-        else A4: Tài khoản bị khóa
-            Ctrl -> Ctrl: Kiểm tra status == 'locked'
-            Ctrl --> View: Báo lỗi "Tài khoản của bạn đã bị khóa"
-        else active
-            Ctrl -> Ctrl: Kiểm tra status == 'active'
-            Ctrl -> Ctrl: Create Session / JWT Token (Quy tắc nghiệp vụ)
-            Ctrl --> View: Redirect đến Dashboard tương ứng (Role-based)
-        end
-    end
-deactivate Ctrl
+User -> View: Truy cập trang Đăng ký
+View --> User: Hiển thị Form Đăng ký
 
 == Luồng 8.2 & 9.2: Đăng ký (Dành cho Chủ nhà) ==
-User -> View: Nhập Thông tin (Tên, Email, Pass, Confirm Pass...)
+User -> View: Nhập Thông tin (Tên, Email, SĐT, Pass, Confirm Pass...)
 User -> View: Nhấn nút "Đăng ký"
 
-View -> View: Kiểm tra (B1 - Thiếu/Định dạng,\nB3 - Pass không khớp)
+View -> View: Frontend Validation (B1, B3)
 activate View
-    note right: Nếu lỗi, hiển thị lỗi\ntrên View (B1, B3)
+    note right: Kiểm tra định dạng,\nô rỗng,...
 deactivate View
 
-View -> Ctrl: register(full_name, email, pass, confirm_pass, phone)
+View -> Ctrl: registerUser(UserRegisterRequest)
 activate Ctrl
-    Ctrl -> Model: checkEmailExists(email)
-    activate Model
-        Model -> DB: SELECT COUNT(*) FROM users WHERE email=?
-        activate DB
-            DB --> Model: count
-        deactivate DB
-        Model --> Ctrl: count
-    deactivate Model
+    Ctrl -> Service: save(request)
+    activate Service
+        
+        alt B3: Password Confirm không khớp
+            Service -> Service: validate password logic
+            Service --> Ctrl: throw IllegalArgumentException
+            Ctrl --> View: 400 Bad Request ("Mật khẩu không khớp")
+        end
 
-    alt B2: Email trùng
-        Ctrl -> Ctrl: Kiểm tra count > 0
-        Ctrl --> View: Báo lỗi "Email này đã được đăng ký"
-    else Email chưa tồn tại
-        Ctrl -> Ctrl: Kiểm tra count == 0
-        Ctrl -> Ctrl: Bcrypt.hash(pass) (Quy tắc nghiệp vụ)
-        Ctrl -> Model: createUser(..., role='HOST', status='pending')
-        activate Model
-            Model -> DB: INSERT INTO users ...
+        Service -> Repos: existsByEmail(email)
+        activate Repos
+            Repos -> DB: SELECT EXISTS(...)
             activate DB
-                DB --> Model: success
+                DB --> Repos: true/false
             deactivate DB
-            Model --> Ctrl: user_id / success
-        deactivate Model
-        Ctrl --> View: Thông báo "Đăng ký thành công, chờ Admin duyệt"
-    end
+            Repos --> Service: result
+        deactivate Repos
+        
+        alt B2: Email đã tồn tại
+            Service --> Ctrl: throw ResourceAlreadyExistsException
+            Ctrl --> View: 409 Conflict ("Email đã đăng ký")
+        end
+
+        Service -> Repos: existsByPhone(phone)
+        activate Repos
+            Repos -> DB: SELECT EXISTS(...)
+            activate DB
+                DB --> Repos: true/false
+            deactivate DB
+            Repos --> Service: result
+        deactivate Repos
+
+        alt B5: Số điện thoại đã tồn tại
+            Service --> Ctrl: throw ResourceAlreadyExistsException
+            Ctrl --> View: 409 Conflict ("Số điện thoại đã đăng ký")
+        end
+
+        Service -> Service: passwordEncoder.encode(pass)
+        
+        Service -> RoleRepos: findByCode("HOST")
+        activate RoleRepos
+            RoleRepos -> DB: SELECT * FROM roles WHERE code='HOST'
+            activate DB
+                DB --> RoleRepos: RoleEntity
+            deactivate DB
+            RoleRepos --> Service: RoleEntity
+        deactivate RoleRepos
+
+        Service -> Repos: save(UserEntity)
+        activate Repos
+            Repos -> DB: INSERT INTO users ...
+            activate DB
+                DB --> Repos: UserRecord
+            deactivate DB
+            Repos --> Service: savedUser
+        deactivate Repos
+        
+        Service --> Ctrl: userId
+    deactivate Service
+    Ctrl --> View: 201 Created (userId)
 deactivate Ctrl
+
+View --> User: Thông báo "Đăng ký thành công, chờ Admin duyệt"
 
 @enduml

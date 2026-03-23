@@ -7,27 +7,20 @@ actor "Chủ nhà\n(Host)" as host
 actor "Quản trị viên\n(Admin)" as admin
 
 package "Hệ thống Bất Động Sản (UC01)" {
-    usecase "Đăng ký Chủ nhà" as UC_Register
-    usecase "Đăng nhập" as UC_Login
-
-    usecase "Xác thực danh tính\n(Check DB & Hash)" as UC_Auth
-    usecase "Kiểm tra trạng thái\n(Role & Status)" as UC_CheckStatus
-
-    usecase "Hiển thị lỗi\n(Sai pass/Bị khóa/Chờ duyệt)" as UC_ShowError
+    usecase "Đăng ký tài khoản\n(Chủ nhà)" as UC_Register
+    usecase "Xác thực dữ liệu\n(Email/SĐT/Pass)" as UC_Validate
+    usecase "Lưu thông tin & Gán quyền\n(Role HOST, Status PENDING)" as UC_Persist
+    usecase "Hiển thị thông báo lỗi" as UC_ShowError
 }
 
 ' Định nghĩa các luồng tương tác của Actor
 guest --> UC_Register
-host --> UC_Login
-admin --> UC_Login
 
 ' Các mối quan hệ Include (Bắt buộc phải có)
-UC_Login ..> UC_Auth : <<include>>
-UC_Login ..> UC_CheckStatus : <<include>>
-UC_Register ..> UC_Auth : <<include>> (Validation)
+UC_Register ..> UC_Validate : <<include>>
+UC_Register ..> UC_Persist : <<include>>
 
 ' Các mối quan hệ Extend (Luồng ngoại lệ)
-UC_ShowError .up.> UC_Login : <<extend>>\n[Nếu lỗi validation/trạng thái]
-UC_ShowError .up.> UC_Register : <<extend>>\n[Nếu trùng Email/Sai pass]
+UC_ShowError .up.> UC_Register : <<extend>>\n[Nếu lỗi validation/trùng lặp]
 
 @enduml
