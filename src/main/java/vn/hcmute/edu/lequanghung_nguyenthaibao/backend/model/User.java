@@ -1,6 +1,8 @@
 package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.base.BaseEntity;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.enums.UserStatus;
 import java.time.OffsetDateTime;
@@ -8,6 +10,11 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.UUID;
 
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+
+@Setter
+@Getter
 @Entity
 @Table(name = "users")
 public class User extends BaseEntity {
@@ -29,6 +36,7 @@ public class User extends BaseEntity {
     private String passwordHash;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false, columnDefinition = "user_status")
     private UserStatus status = UserStatus.ACTIVE;
 
@@ -46,75 +54,4 @@ public class User extends BaseEntity {
     )
     private Set<Role> roles = new HashSet<>();
 
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public String getFullName() {
-        return fullName;
-    }
-
-    public void setFullName(String fullName) {
-        this.fullName = fullName;
-    }
-
-    public String getEmail() {
-        return email;
-    }
-
-    public void setEmail(String email) {
-        this.email = email;
-    }
-
-    public String getPhone() {
-        return phone;
-    }
-
-    public void setPhone(String phone) {
-        this.phone = phone;
-    }
-
-    public String getPasswordHash() {
-        return passwordHash;
-    }
-
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-    }
-
-    public UserStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(UserStatus status) {
-        this.status = status;
-    }
-
-    public OffsetDateTime getLastLoginAt() {
-        return lastLoginAt;
-    }
-
-    public void setLastLoginAt(OffsetDateTime lastLoginAt) {
-        this.lastLoginAt = lastLoginAt;
-    }
-
-    public OffsetDateTime getDeletedAt() {
-        return deletedAt;
-    }
-
-    public void setDeletedAt(OffsetDateTime deletedAt) {
-        this.deletedAt = deletedAt;
-    }
-
-    public Set<Role> getRoles() {
-        return roles;
-    }
-
-    public void setRoles(Set<Role> roles) {
-        this.roles = roles;
-    }
 }
