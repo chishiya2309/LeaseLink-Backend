@@ -51,4 +51,19 @@ public class JwtUtil {
                 .signWith(getSigningKey())
                 .compact();
     }
+
+    public boolean validateToken(String authToken) {
+        try {
+            io.jsonwebtoken.Jwts.parser().setSigningKey(getSigningKey()).build().parseClaimsJws(authToken);
+            return true;
+        } catch (Exception e) {
+            System.err.println("❌ LỖI GIẢI MÃ JWT: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public io.jsonwebtoken.Claims getClaimsFromToken(String token) {
+        return io.jsonwebtoken.Jwts.parser().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody();
+    }
 }
