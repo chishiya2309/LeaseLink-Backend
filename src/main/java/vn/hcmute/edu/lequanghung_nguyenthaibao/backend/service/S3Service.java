@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.services.s3.S3Client;
-import software.amazon.awssdk.services.s3.model.ObjectCannedACL;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 import java.io.IOException;
@@ -27,11 +26,19 @@ public class S3Service {
                 .bucket(bucketName)
                 .key(fileName)
                 .contentType(file.getContentType())
-                 .acl(ObjectCannedACL.PUBLIC_READ) // nếu muốn file public ai cũng xem được
                 .build();
 
         s3Client.putObject(request, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
         return s3Client.utilities().getUrl(r -> r.bucket(bucketName).key(fileName)).toExternalForm();
     }
+    public void deleteFile(String fileUrl) {
+        if (fileUrl != null && fileUrl.contains(bucketName)) {
+            try {
+                String key = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+                s3Client.deleteObject(r -> r.bucket(bucketName).key(key));
+            } catch (Exception e) {
+                // Log and ignore to prevent blocking DB operations
+            }
+        }
+    }
 }
-

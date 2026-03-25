@@ -8,6 +8,8 @@ import java.time.OffsetDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 @Entity
 @Table(name = "properties")
@@ -50,6 +52,7 @@ public class Property extends BaseEntity {
     private Boolean allowPets = false;
 
     @Enumerated(EnumType.STRING)
+    @JdbcTypeCode(SqlTypes.NAMED_ENUM)
     @Column(nullable = false, columnDefinition = "property_status")
     private PropertyStatus status = PropertyStatus.PENDING;
 
