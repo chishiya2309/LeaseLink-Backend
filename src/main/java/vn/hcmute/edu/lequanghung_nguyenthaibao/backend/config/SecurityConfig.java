@@ -44,7 +44,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/users/forgot-password").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/verify-reset-code").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/reset-password").permitAll()
-
+                        .requestMatchers(HttpMethod.POST, "/api/v1/ai/search").permitAll()
 
                         // Tất cả các request khác đều phải đăng nhập
                         .anyRequest().authenticated()
