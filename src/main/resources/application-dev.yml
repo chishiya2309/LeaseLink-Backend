@@ -40,4 +40,4 @@ openapi:
     api-docs: backend-leaselink
     title: Backend cho web LeaseLink
     version: 1.0.0
-    server: http://localhost:${server.port:8080}
+    server: http://localhost:${server.port}

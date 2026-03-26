@@ -110,6 +110,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public LoginResponse login(UserLoginRequest request, HttpServletRequest httpRequest) {
+        log.info("Xử lý đăng nhập cho user: {}", request.getEmail());
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new InvalidCredentialsException("Tài khoản hoặc mật khẩu không chính xác"));
 
@@ -243,23 +244,27 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void logout(String jti, UUID sessionId, UUID userId) {
+        log.info("Xử lý đăng xuất user: {}", userId);
+        OffsetDateTime now = OffsetDateTime.now();
+
         RevokedJti revokedJti = new RevokedJti();
         revokedJti.setJti(UUID.fromString(jti));
         revokedJti.setUser(userRepository.getReferenceById(userId));
         revokedJti.setTokenType("access");
-        revokedJti.setExpiresAt(OffsetDateTime.now().plus(1, ChronoUnit.HOURS));
+        revokedJti.setExpiresAt(now.plus(1, ChronoUnit.HOURS));
         revokedJtiRepository.save(revokedJti);
 
         authSessionRepository.findById(sessionId).ifPresent(session -> {
             session.setIsActive(false);
             authSessionRepository.save(session);
-            refreshTokenRepository.revokeBySessionId(sessionId, "User logged out");
+            refreshTokenRepository.revokeBySessionId(sessionId, "User logged out", now);
         });
     }
 
     @Override
     @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
+        log.info("Xử lý quên mật khẩu cho user: {}", request.getEmail());
         userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
             OffsetDateTime now = OffsetDateTime.now();
             passwordResetTokenRepository.consumeAllActiveByUser(user, now);
@@ -286,6 +291,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public ResetPasswordVerifyResponse verifyResetCode(VerifyResetCodeRequest request) {
+        log.info("Xử lý xác thực mã OTP đặt lại mật khẩu cho user: {}", request.getEmail());
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new IllegalArgumentException("Mã xác thực không hợp lệ hoặc đã hết hạn."));
 
@@ -328,6 +334,7 @@ public class UserServiceImpl implements UserService {
     @Override
     @Transactional
     public void resetPassword(ResetPasswordRequest request) {
+        log.info("Xử lý reset mật khẩu cho user: {}", request.getEmail());
         if (!request.getPassword().equals(request.getConfirmPassword())) {
             throw new IllegalArgumentException("Xác nhận mật khẩu không khớp.");
         }
@@ -352,7 +359,7 @@ public class UserServiceImpl implements UserService {
         passwordResetTokenRepository.save(token);
 
         authSessionRepository.deactivateAllByUser(user);
-        refreshTokenRepository.revokeAllByUser(user, "Password reset");
+        refreshTokenRepository.revokeAllByUser(user, "Password reset", now);
     }
 
     private String generateRandomTokenString() {
