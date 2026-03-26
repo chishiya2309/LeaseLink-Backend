@@ -45,6 +45,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 String email = claims.getSubject();
                 String rolesStr = claims.get("roles", String.class);
+                String status = claims.get("status", String.class);
+
+                if ("LOCKED".equalsIgnoreCase(status)) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
 
                 List<SimpleGrantedAuthority> authorities = Arrays.stream(rolesStr.split(","))
                         .filter(StringUtils::hasText)

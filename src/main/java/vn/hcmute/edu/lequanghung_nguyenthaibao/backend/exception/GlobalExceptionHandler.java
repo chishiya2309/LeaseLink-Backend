@@ -23,24 +23,36 @@ public class GlobalExceptionHandler {
 
     // Bắt lỗi trùng lặp dữ liệu Email/Phone
     @ExceptionHandler(ResourceAlreadyExistsException.class)
-    public ResponseEntity<Map<String, String>> handleResourceAlreadyExistsException(ResourceAlreadyExistsException ex) {
-        Map<String, String> error = new HashMap<>();
-        error.put("error", ex.getMessage());
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<Map<String, Object>> handleResourceAlreadyExistsException(ResourceAlreadyExistsException ex) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
-    // Bắt các thông báo lỗi logic thông thường (VD: Mật khẩu không khớp)
+    // Bắt các thông báo lỗi logic thông thường
     @ExceptionHandler(IllegalArgumentException.class)
-    public ResponseEntity<Map<String, String>> handleIllegalArgumentException(IllegalArgumentException ex) {
-        Map<String, String> error = new HashMap<>();
-        error.put("error", ex.getMessage());
-        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
+    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException ex) {
+        return buildErrorResponse(HttpStatus.BAD_REQUEST, ex.getMessage());
     }
 
     @ExceptionHandler(ExternalServiceException.class)
-    public ResponseEntity<Map<String, String>> handleExternalServiceException(ExternalServiceException ex) {
-        Map<String, String> error = new HashMap<>();
-        error.put("error", ex.getMessage());
-        return new ResponseEntity<>(error, HttpStatus.BAD_GATEWAY);
+    public ResponseEntity<Map<String, Object>> handleExternalServiceException(ExternalServiceException ex) {
+        return buildErrorResponse(HttpStatus.BAD_GATEWAY, ex.getMessage());
+    }
+
+    @ExceptionHandler(AccountLockedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccountLockedException(AccountLockedException ex) {
+        return buildErrorResponse(HttpStatus.FORBIDDEN, ex.getMessage());
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> handleInvalidCredentialsException(InvalidCredentialsException ex) {
+        return buildErrorResponse(HttpStatus.UNAUTHORIZED, ex.getMessage());
+    }
+
+    private ResponseEntity<Map<String, Object>> buildErrorResponse(HttpStatus status, String message) {
+        Map<String, Object> response = new HashMap<>();
+        response.put("status", status.value());
+        response.put("message", message);
+        response.put("data", null);
+        return new ResponseEntity<>(response, status);
     }
 }
