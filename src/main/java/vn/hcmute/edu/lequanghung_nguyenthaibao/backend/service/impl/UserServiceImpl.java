@@ -258,29 +258,41 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
-    @Transactional
     public void forgotPassword(ForgotPasswordRequest request) {
-        userRepository.findByEmail(request.getEmail()).ifPresent(user -> {
-            OffsetDateTime now = OffsetDateTime.now();
-            passwordResetTokenRepository.consumeAllActiveByUser(user, now);
+        // 1. Generate OTP and save to DB in a short transaction
+        User user = userRepository.findByEmail(request.getEmail()).orElse(null);
+        if (user == null) return;
 
-            String otpCode = generateOtpCode();
-            PasswordResetToken token = new PasswordResetToken();
-            token.setUser(user);
-            token.setEmailSnapshot(user.getEmail());
-            token.setOtpHash(passwordEncoder.encode(otpCode));
-            token.setExpiresAt(now.plusMinutes(brevoProperties.getResetCodeExpiryMinutes()));
-            passwordResetTokenRepository.save(token);
+        String otpCode = generateOtpCode();
+        int expiryMinutes = brevoProperties.getResetCodeExpiryMinutes();
+        String fullName = user.getFullName();
+        String email = user.getEmail();
 
-            emailService.sendPasswordResetOtp(
-                    user.getEmail(),
-                    user.getFullName(),
-                    otpCode,
-                    brevoProperties.getResetCodeExpiryMinutes()
-            );
+        // Separate method for transactional part
+        createResetToken(user, otpCode, expiryMinutes);
 
-            log.info("Đã tạo password reset OTP cho email {}", user.getEmail());
-        });
+        // 2. Send email OUTSIDE the transaction
+        emailService.sendPasswordResetOtp(
+                email,
+                fullName,
+                otpCode,
+                expiryMinutes
+        );
+
+        log.info("Đã tạo và gửi password reset OTP cho email {}", email);
+    }
+
+    @Transactional
+    public void createResetToken(User user, String otpCode, int expiryMinutes) {
+        OffsetDateTime now = OffsetDateTime.now();
+        passwordResetTokenRepository.consumeAllActiveByUser(user, now);
+
+        PasswordResetToken token = new PasswordResetToken();
+        token.setUser(user);
+        token.setEmailSnapshot(user.getEmail());
+        token.setOtpHash(passwordEncoder.encode(otpCode));
+        token.setExpiresAt(now.plusMinutes(expiryMinutes));
+        passwordResetTokenRepository.save(token);
     }
 
     @Override

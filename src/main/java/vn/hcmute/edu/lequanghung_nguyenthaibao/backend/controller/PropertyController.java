@@ -9,18 +9,21 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.security.access.prepost.PreAuthorize;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.PropertyRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.RejectionRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.response.PropertyResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.User;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.UserRepository;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.PropertyService;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.PropertyMediaService;
 
 import java.util.List;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.enums.PropertyStatus;
 
 @RestController
 @RequestMapping("/api/v1/properties")
@@ -28,6 +31,7 @@ import org.springframework.data.domain.Pageable;
 public class PropertyController {
 
     private final PropertyService propertyService;
+    private final PropertyMediaService propertyMediaService;
     private final UserRepository userRepository;
 
     @PostMapping(consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -36,7 +40,13 @@ public class PropertyController {
             @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @RequestPart(value = "video", required = false) MultipartFile video) {
         User host = getAuthenticatedUser();
-        PropertyResponse response = propertyService.createProperty(request, images, video, host);
+        
+        // 1. Upload media outside transaction
+        List<String> imageUrls = propertyMediaService.uploadImages(images);
+        String videoUrl = propertyMediaService.uploadVideo(video);
+        
+        // 2. Persist to DB
+        PropertyResponse response = propertyService.createProperty(request, imageUrls, videoUrl, host);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -47,14 +57,33 @@ public class PropertyController {
             @RequestPart(value = "images", required = false) List<MultipartFile> images,
             @RequestPart(value = "video", required = false) MultipartFile video) {
         User host = getAuthenticatedUser();
-        PropertyResponse response = propertyService.updateProperty(id, request, images, video, host);
+
+        // 1. Upload new media if provided
+        List<String> imageUrls = (images != null && !images.isEmpty()) ? propertyMediaService.uploadImages(images) : null;
+        String videoUrl = (video != null && !video.isEmpty()) ? propertyMediaService.uploadVideo(video) : null;
+
+        // 2. Persist update
+        PropertyResponse response = propertyService.updateProperty(id, request, imageUrls, videoUrl, host);
         return ResponseEntity.ok(response);
     }
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteProperty(@PathVariable UUID id) {
-        User host = getAuthenticatedUser();
-        propertyService.softDeleteProperty(id, host);
+        User user = getAuthenticatedUser();
+        
+        // 1. Get current property to find media URLs for deletion
+        PropertyResponse property = propertyService.getProperty(id);
+        
+        // 2. Delete from DB first (if rollback needed, we still have URLs, but S3 delete is hard to rollback)
+        // Actually, best practice is DB delete first, then S3 (orphaned files are okay, missing files aren't)
+        propertyService.deleteProperty(id, user);
+        
+        // 3. Delete from S3
+        if (property.getImages() != null) {
+            List<String> urls = property.getImages().stream().map(PropertyResponse.ImageResponse::getImageUrl).toList();
+            propertyMediaService.deleteMedias(urls);
+        }
+        
         return ResponseEntity.noContent().build();
     }
 
@@ -74,6 +103,17 @@ public class PropertyController {
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<PropertyResponse> response = propertyService.getPendingProperties(pageable);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<PropertyResponse>> getAllProperties(
+            @RequestParam(required = false) PropertyStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<PropertyResponse> response = propertyService.getAllProperties(status, pageable);
         return ResponseEntity.ok(response);
     }
 
