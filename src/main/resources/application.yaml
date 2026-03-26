@@ -5,7 +5,7 @@ spring:
   application:
     name: backend-service
   profiles:
-    active: @spring.profiles.active@
+    active: "@spring.profiles.active@"
   config:
     import: optional:file:.env[.properties]
   servlet:

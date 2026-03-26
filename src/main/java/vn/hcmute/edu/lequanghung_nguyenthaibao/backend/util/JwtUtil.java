@@ -54,16 +54,33 @@ public class JwtUtil {
 
     public boolean validateToken(String authToken) {
         try {
-            io.jsonwebtoken.Jwts.parser().setSigningKey(getSigningKey()).build().parseClaimsJws(authToken);
+            Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(authToken);
             return true;
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            System.err.println("❌ LỖI GIẢI MÃ JWT: Token đã hết hạn - " + e.getMessage());
+        } catch (io.jsonwebtoken.security.SignatureException e) {
+            System.err.println("❌ LỖI GIẢI MÃ JWT: Chữ ký không hợp lệ - " + e.getMessage());
+        } catch (io.jsonwebtoken.MalformedJwtException e) {
+            System.err.println("❌ LỖI GIẢI MÃ JWT: Token không đúng định dạng - " + e.getMessage());
+        } catch (io.jsonwebtoken.UnsupportedJwtException e) {
+            System.err.println("❌ LỖI GIẢI MÃ JWT: Token không được hỗ trợ - " + e.getMessage());
+        } catch (IllegalArgumentException e) {
+            System.err.println("❌ LỖI GIẢI MÃ JWT: Token trống - " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("❌ LỖI GIẢI MÃ JWT: " + e.getMessage());
+            System.err.println("❌ LỖI GIẢI MÃ JWT: Lỗi không xác định - " + e.getMessage());
             e.printStackTrace();
-            return false;
         }
+        return false;
     }
 
     public io.jsonwebtoken.Claims getClaimsFromToken(String token) {
-        return io.jsonwebtoken.Jwts.parser().setSigningKey(getSigningKey()).build().parseClaimsJws(token).getBody();
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }
