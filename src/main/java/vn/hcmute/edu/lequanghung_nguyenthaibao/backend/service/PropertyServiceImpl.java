@@ -3,7 +3,6 @@ package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.PropertyRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.response.PropertyResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.*;
@@ -12,7 +11,6 @@ import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.AreaRepository
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.PropertyRepository;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.RoomTypeRepository;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -27,14 +25,10 @@ public class PropertyServiceImpl implements PropertyService {
     private final PropertyRepository propertyRepository;
     private final AreaRepository areaRepository;
     private final RoomTypeRepository roomTypeRepository;
-    private final S3Service s3Service;
 
     @Override
     @Transactional
-    public PropertyResponse createProperty(PropertyRequest request, List<MultipartFile> images, MultipartFile video, User host) {
-        if (images != null && images.size() > 10) {
-            throw new IllegalArgumentException("Maximum 10 images are allowed per property posting.");
-        }
+    public PropertyResponse createProperty(PropertyRequest request, List<String> imageUrls, String videoUrl, User host) {
         Area area = areaRepository.findById(request.getAreaId())
                 .orElseThrow(() -> new IllegalArgumentException("Area not found with id: " + request.getAreaId()));
         RoomType roomType = roomTypeRepository.findById(request.getRoomTypeId())
@@ -51,30 +45,24 @@ public class PropertyServiceImpl implements PropertyService {
         property.setAreaM2(request.getAreaM2());
         property.setBedrooms(request.getBedrooms());
         property.setAllowPets(request.getAllowPets());
-        property.setStatus(PropertyStatus.PENDING); // UC02 Requirement
+        property.setStatus(PropertyStatus.PENDING);
 
-        try {
-            if (video != null && !video.isEmpty()) {
-                PropertyImage videoImage = new PropertyImage();
-                videoImage.setImageUrl(s3Service.uploadFile(video));
-                videoImage.setSortOrder(999);
-                videoImage.setIsThumbnail(false);
-                property.addImage(videoImage);
+        if (videoUrl != null) {
+            PropertyImage videoImage = new PropertyImage();
+            videoImage.setImageUrl(videoUrl);
+            videoImage.setSortOrder(999);
+            videoImage.setIsThumbnail(false);
+            property.addImage(videoImage);
+        }
+
+        if (imageUrls != null) {
+            for (int i = 0; i < imageUrls.size(); i++) {
+                PropertyImage propertyImage = new PropertyImage();
+                propertyImage.setImageUrl(imageUrls.get(i));
+                propertyImage.setSortOrder(i);
+                propertyImage.setIsThumbnail(i == 0);
+                property.addImage(propertyImage);
             }
-            if (images != null && !images.isEmpty()) {
-                for (int i = 0; i < images.size(); i++) {
-                    MultipartFile file = images.get(i);
-                    if (!file.isEmpty()) {
-                        PropertyImage propertyImage = new PropertyImage();
-                        propertyImage.setImageUrl(s3Service.uploadFile(file));
-                        propertyImage.setSortOrder(i);
-                        propertyImage.setIsThumbnail(i == 0);
-                        property.addImage(propertyImage);
-                    }
-                }
-            }
-        } catch (IOException e) {
-            throw new RuntimeException("Media upload failed: " + e.getMessage(), e);
         }
 
         return mapToResponse(propertyRepository.save(property));
@@ -82,11 +70,12 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional
-    public PropertyResponse updateProperty(UUID id, PropertyRequest request, List<MultipartFile> images, MultipartFile video, User host) {
+    public PropertyResponse updateProperty(UUID id, PropertyRequest request, List<String> imageUrls, String videoUrl, User host) {
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Property not found"));
 
-        if (!property.getHost().getId().equals(host.getId())) {
+        boolean isAdmin = userHasRole(host, "ADMIN");
+        if (!isAdmin && !property.getHost().getId().equals(host.getId())) {
             throw new IllegalArgumentException("You are not authorized to update this property.");
         }
 
@@ -104,50 +93,36 @@ public class PropertyServiceImpl implements PropertyService {
         property.setAreaM2(request.getAreaM2());
         property.setBedrooms(request.getBedrooms());
         property.setAllowPets(request.getAllowPets());
-        property.setStatus(PropertyStatus.PENDING); // Spec Exception A1
+        property.setStatus(PropertyStatus.PENDING);
 
-        try {
-            if (video != null && !video.isEmpty()) {
-                if (property.getImages() != null) {
-                    property.getImages().removeIf(img -> {
-                        String url = img.getImageUrl().toLowerCase();
-                        if (url.endsWith(".mp4") || url.endsWith(".mov") || url.endsWith(".webm")) {
-                            s3Service.deleteFile(img.getImageUrl());
-                            return true;
-                        }
-                        return false;
-                    });
-                }
-                PropertyImage videoImage = new PropertyImage();
-                videoImage.setImageUrl(s3Service.uploadFile(video));
-                videoImage.setSortOrder(999);
-                videoImage.setIsThumbnail(false);
-                property.addImage(videoImage);
+        // Update video if provided
+        if (videoUrl != null) {
+            if (property.getImages() != null) {
+                property.getImages().removeIf(img -> {
+                    String url = img.getImageUrl().toLowerCase();
+                    return url.endsWith(".mp4") || url.endsWith(".mov") || url.endsWith(".webm");
+                });
+            }
+            PropertyImage videoImage = new PropertyImage();
+            videoImage.setImageUrl(videoUrl);
+            videoImage.setSortOrder(999);
+            videoImage.setIsThumbnail(false);
+            property.addImage(videoImage);
+        }
+
+        // Update images if provided
+        if (imageUrls != null && !imageUrls.isEmpty()) {
+            if (property.getImages() != null) {
+                property.getImages().clear();
             }
 
-            if (images != null && !images.isEmpty()) {
-                if (images.size() > 10) throw new IllegalArgumentException("Maximum 10 images restricted.");
-                
-                if (property.getImages() != null) {
-                    for (PropertyImage img : property.getImages()) {
-                        s3Service.deleteFile(img.getImageUrl());
-                    }
-                    property.getImages().clear();
-                }
-
-                for (int i = 0; i < images.size(); i++) {
-                    MultipartFile file = images.get(i);
-                    if (!file.isEmpty()) {
-                        PropertyImage propertyImage = new PropertyImage();
-                        propertyImage.setImageUrl(s3Service.uploadFile(file));
-                        propertyImage.setSortOrder(i);
-                        propertyImage.setIsThumbnail(i == 0);
-                        property.addImage(propertyImage);
-                    }
-                }
+            for (int i = 0; i < imageUrls.size(); i++) {
+                PropertyImage propertyImage = new PropertyImage();
+                propertyImage.setImageUrl(imageUrls.get(i));
+                propertyImage.setSortOrder(i);
+                propertyImage.setIsThumbnail(i == 0);
+                property.addImage(propertyImage);
             }
-        } catch (IOException e) {
-            throw new RuntimeException("Media update failed: " + e.getMessage(), e);
         }
 
         return mapToResponse(propertyRepository.save(property));
@@ -155,27 +130,37 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional
-    public void softDeleteProperty(UUID id, User host) {
+    public void deleteProperty(UUID id, User user) {
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Property not found"));
 
-        if (!property.getHost().getId().equals(host.getId())) {
+        boolean isAdmin = userHasRole(user, "ADMIN");
+        if (!isAdmin && !property.getHost().getId().equals(user.getId())) {
             throw new IllegalArgumentException("You are not authorized to delete this property.");
         }
 
-        property.setStatus(PropertyStatus.DELETED);
-        property.setDeletedAt(java.time.OffsetDateTime.now());
-        propertyRepository.save(property);
+        propertyRepository.delete(property);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<PropertyResponse> getHostProperties(User host, Pageable pageable) {
         return propertyRepository.findByHost(host, pageable).map(this::mapToResponse);
     }
 
     @Override
+    @Transactional(readOnly = true)
     public Page<PropertyResponse> getPendingProperties(Pageable pageable) {
         return propertyRepository.findByStatus(PropertyStatus.PENDING, pageable).map(this::mapToResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PropertyResponse> getAllProperties(PropertyStatus status, Pageable pageable) {
+        if (status != null) {
+            return propertyRepository.findByStatus(status, pageable).map(this::mapToResponse);
+        }
+        return propertyRepository.findAll(pageable).map(this::mapToResponse);
     }
 
     @Override
@@ -200,10 +185,17 @@ public class PropertyServiceImpl implements PropertyService {
     }
 
     @Override
+    @Transactional(readOnly = true)
     public PropertyResponse getProperty(UUID id) {
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Property not found"));
         return mapToResponse(property);
+    }
+
+    private boolean userHasRole(User user, String roleCode) {
+        if (user == null || user.getRoles() == null) return false;
+        return user.getRoles().stream()
+                .anyMatch(role -> roleCode.equals(role.getCode()));
     }
 
     private PropertyResponse mapToResponse(Property property) {

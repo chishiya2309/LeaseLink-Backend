@@ -59,7 +59,7 @@ public class BrevoEmailService implements EmailService {
         } catch (RestClientResponseException ex) {
             log.error("Brevo error: status={}, body={}", ex.getStatusCode(), ex.getResponseBodyAsString(), ex);
             String responseBody = ex.getResponseBodyAsString();
-            String details = (responseBody == null || responseBody.isBlank()) ? ex.getStatusText() : responseBody;
+            String details = responseBody.isBlank() ? ex.getStatusText() : responseBody;
             throw new ExternalServiceException("Brevo từ chối gửi email reset mật khẩu: " + details);
         } catch (ExternalServiceException ex) {
             throw ex;
