@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.config.BrevoProperties;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.ForgotPasswordRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.ResetPasswordRequest;
@@ -120,10 +121,20 @@ public class UserServiceImpl implements UserService {
             throw new AccountLockedException("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin để mở khóa.");
         }
 
-        Role selectedRole = user.getRoles().stream()
-                .filter(r -> r.getCode().equalsIgnoreCase(request.getRole()))
-                .findFirst()
-                .orElseThrow(() -> new InvalidCredentialsException("Tài khoản không có quyền truy cập vai trò này."));
+        Role selectedRole;
+        if (StringUtils.hasText(request.getRole())) {
+            selectedRole = user.getRoles().stream()
+                    .filter(r -> r.getCode().equalsIgnoreCase(request.getRole()))
+                    .findFirst()
+                    .orElseThrow(() -> new InvalidCredentialsException("Tài khoản không có quyền truy cập vai trò này."));
+        } else {
+            // Pick ADMIN first if available, otherwise just the first one
+            selectedRole = user.getRoles().stream()
+                    .filter(r -> r.getCode().equalsIgnoreCase("ADMIN"))
+                    .findFirst()
+                    .orElseGet(() -> user.getRoles().stream().findFirst()
+                            .orElseThrow(() -> new InvalidCredentialsException("Tài khoản chưa được gán vai trò.")));
+        }
 
         user.setLastLoginAt(OffsetDateTime.now());
         userRepository.save(user);
@@ -159,7 +170,72 @@ public class UserServiceImpl implements UserService {
 
         return LoginResponse.builder()
                 .accessToken(accessToken)
-                .refreshToken(plainRefreshToken)
+                .refreshToken(refreshTokenEntity.getJti() + "." + plainRefreshToken)
+                .user(userDto)
+                .build();
+    }
+
+    @Override
+    @Transactional
+    public LoginResponse refreshToken(String refreshToken) {
+        String[] parts = refreshToken.split("\\.");
+        if (parts.length != 2) {
+            throw new InvalidCredentialsException("Refresh Token không hợp lệ");
+        }
+
+        UUID jti = UUID.fromString(parts[0]);
+        String plainToken = parts[1];
+
+        RefreshToken refreshTokenEntity = refreshTokenRepository.findByJti(jti)
+                .orElseThrow(() -> new InvalidCredentialsException("Refresh Token không tồn tại hoặc đã bị vô hiệu hóa"));
+
+        if (refreshTokenEntity.getRevokedAt() != null) {
+            authSessionRepository.findById(refreshTokenEntity.getSession().getId()).ifPresent(s -> {
+                s.setIsActive(false);
+                authSessionRepository.save(s);
+            });
+            refreshTokenRepository.revokeBySessionId(refreshTokenEntity.getSession().getId(), "Refresh token reuse detected");
+            throw new InvalidCredentialsException("Refresh Token đã được sử dụng trước đó. Vui lòng đăng nhập lại.");
+        }
+
+        if (refreshTokenEntity.getExpiresAt().isBefore(OffsetDateTime.now())) {
+            throw new InvalidCredentialsException("Refresh Token đã hết hạn. Vui lòng đăng nhập lại.");
+        }
+
+        if (!passwordEncoder.matches(plainToken, refreshTokenEntity.getTokenHash())) {
+            throw new InvalidCredentialsException("Refresh Token không chính xác.");
+        }
+
+        User user = refreshTokenEntity.getUser();
+        AuthSession session = refreshTokenEntity.getSession();
+        Role selectedRole = user.getRoles().stream().findFirst().orElseThrow();
+
+        String newAccessToken = jwtUtil.generateAccessToken(user, selectedRole, session.getId());
+
+        String newPlainRefreshToken = generateRandomTokenString();
+        RefreshToken newRefreshTokenEntity = new RefreshToken();
+        newRefreshTokenEntity.setSession(session);
+        newRefreshTokenEntity.setUser(user);
+        newRefreshTokenEntity.setJti(UUID.randomUUID());
+        newRefreshTokenEntity.setTokenHash(passwordEncoder.encode(newPlainRefreshToken));
+        newRefreshTokenEntity.setExpiresAt(OffsetDateTime.now().plus(7, java.time.temporal.ChronoUnit.DAYS));
+        refreshTokenRepository.save(newRefreshTokenEntity);
+
+        refreshTokenEntity.setRevokedAt(OffsetDateTime.now());
+        refreshTokenEntity.setReplacedByToken(newRefreshTokenEntity);
+        refreshTokenEntity.setRevokeReason("Rotated");
+        refreshTokenRepository.save(refreshTokenEntity);
+
+        UserResponse userDto = new UserResponse();
+        userDto.setId(user.getId());
+        userDto.setEmail(user.getEmail());
+        userDto.setFullName(user.getFullName());
+        userDto.setStatus(user.getStatus());
+        userDto.setRole(selectedRole);
+
+        return LoginResponse.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(newRefreshTokenEntity.getJti() + "." + newPlainRefreshToken)
                 .user(userDto)
                 .build();
     }

@@ -7,9 +7,11 @@ import org.springframework.stereotype.Repository;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.Property;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.User;
 
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.enums.PropertyStatus;
 import java.util.UUID;
 
 @Repository
 public interface PropertyRepository extends JpaRepository<Property, UUID> {
     Page<Property> findByHost(User host, Pageable pageable);
+    Page<Property> findByStatus(PropertyStatus status, Pageable pageable);
 }
