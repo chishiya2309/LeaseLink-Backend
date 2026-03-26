@@ -25,6 +25,7 @@ public class PropertyResponse {
     private PropertyStatus status;
     private List<ImageResponse> images;
     private OffsetDateTime createdAt;
+    private String rejectedReason;
     
     public static class ImageResponse {
         private UUID id;
@@ -76,4 +77,6 @@ public class PropertyResponse {
     public void setImages(List<ImageResponse> images) { this.images = images; }
     public OffsetDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(OffsetDateTime createdAt) { this.createdAt = createdAt; }
+    public String getRejectedReason() { return rejectedReason; }
+    public void setRejectedReason(String rejectedReason) { this.rejectedReason = rejectedReason; }
 }

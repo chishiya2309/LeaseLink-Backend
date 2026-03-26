@@ -7,9 +7,12 @@ import org.springframework.transaction.annotation.Transactional;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.RefreshToken;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.User;
 
+import java.util.Optional;
 import java.util.UUID;
 
 public interface RefreshTokenRepository extends JpaRepository<RefreshToken, UUID> {
+    Optional<RefreshToken> findByJti(UUID jti);
+
     @Modifying
     @Transactional
     @Query("update RefreshToken r set r.revokedAt = current_timestamp, r.revokeReason = :reason where r.session.id = :sessionId and r.revokedAt is null")

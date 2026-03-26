@@ -17,4 +17,7 @@ public interface PropertyService {
     PropertyResponse updateProperty(UUID id, PropertyRequest request, List<MultipartFile> images, MultipartFile video, User host);
     void softDeleteProperty(UUID id, User host);
     Page<PropertyResponse> getHostProperties(User host, Pageable pageable);
+    Page<PropertyResponse> getPendingProperties(Pageable pageable);
+    PropertyResponse approveProperty(UUID id, User admin);
+    PropertyResponse rejectProperty(UUID id, String reason, User admin);
 }

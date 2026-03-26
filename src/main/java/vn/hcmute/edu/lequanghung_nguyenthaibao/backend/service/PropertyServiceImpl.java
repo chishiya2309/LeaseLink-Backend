@@ -174,6 +174,32 @@ public class PropertyServiceImpl implements PropertyService {
     }
 
     @Override
+    public Page<PropertyResponse> getPendingProperties(Pageable pageable) {
+        return propertyRepository.findByStatus(PropertyStatus.PENDING, pageable).map(this::mapToResponse);
+    }
+
+    @Override
+    @Transactional
+    public PropertyResponse approveProperty(UUID id, User admin) {
+        Property property = propertyRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Property not found"));
+        property.setStatus(PropertyStatus.APPROVED);
+        property.setApprovedBy(admin);
+        property.setApprovedAt(java.time.OffsetDateTime.now());
+        return mapToResponse(propertyRepository.save(property));
+    }
+
+    @Override
+    @Transactional
+    public PropertyResponse rejectProperty(UUID id, String reason, User admin) {
+        Property property = propertyRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Property not found"));
+        property.setStatus(PropertyStatus.REJECTED);
+        property.setRejectedReason(reason);
+        return mapToResponse(propertyRepository.save(property));
+    }
+
+    @Override
     public PropertyResponse getProperty(UUID id) {
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Property not found"));
@@ -204,6 +230,7 @@ public class PropertyServiceImpl implements PropertyService {
         response.setAllowPets(property.getAllowPets());
         response.setStatus(property.getStatus());
         response.setCreatedAt(property.getCreatedAt());
+        response.setRejectedReason(property.getRejectedReason());
 
         if (property.getImages() != null) {
             List<PropertyResponse.ImageResponse> imageResponses = property.getImages().stream().map(img -> {
