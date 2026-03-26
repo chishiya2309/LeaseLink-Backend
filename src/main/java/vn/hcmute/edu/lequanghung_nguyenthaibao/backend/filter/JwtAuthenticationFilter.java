@@ -19,12 +19,15 @@ import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.UUID;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.RevokedJtiRepository;
 
 @Component
 @RequiredArgsConstructor
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtUtil jwtUtil;
+    private final RevokedJtiRepository revokedJtiRepository;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -33,6 +36,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(jwt) && jwtUtil.validateToken(jwt)) {
                 Claims claims = jwtUtil.getClaimsFromToken(jwt);
+                String jtiStr = claims.getId();
+                
+                if (jtiStr != null && revokedJtiRepository.existsById(UUID.fromString(jtiStr))) {
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
                 String email = claims.getSubject();
                 String rolesStr = claims.get("roles", String.class);
 

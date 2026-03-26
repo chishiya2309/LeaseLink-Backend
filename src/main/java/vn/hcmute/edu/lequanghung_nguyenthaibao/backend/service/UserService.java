@@ -24,6 +24,8 @@ public interface UserService {
 
     LoginResponse login(UserLoginRequest request, HttpServletRequest httpServletRequest);
 
+    LoginResponse refreshToken(String refreshToken);
+
     void logout(String jti, UUID sessionId, UUID userId);
 
     void forgotPassword(ForgotPasswordRequest request);

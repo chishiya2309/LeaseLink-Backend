@@ -41,14 +41,21 @@ public class SecurityConfig {
                         // Mở các endpoint không cần đăng nhập
                         .requestMatchers(HttpMethod.POST, "/users/register").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/login").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/users/refresh-token").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/forgot-password").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/verify-reset-code").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/reset-password").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/ai/search").permitAll()
+                        
+                        // Chi Admin mới có quyền duyệt tin
+                        .requestMatchers("/api/v1/properties/pending/**").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/properties/*/approve").hasRole("ADMIN")
+                        .requestMatchers("/api/v1/properties/*/reject").hasRole("ADMIN")
 
                         // Tất cả các request khác đều phải đăng nhập
                         .anyRequest().authenticated()
                 )
+                .sessionManagement(session -> session.sessionCreationPolicy(org.springframework.security.config.http.SessionCreationPolicy.STATELESS))
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

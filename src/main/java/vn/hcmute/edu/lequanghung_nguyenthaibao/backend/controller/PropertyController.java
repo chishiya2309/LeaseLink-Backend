@@ -10,6 +10,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.PropertyRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.RejectionRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.response.PropertyResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.User;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.UserRepository;
@@ -64,6 +65,31 @@ public class PropertyController {
         User host = getAuthenticatedUser();
         Pageable pageable = PageRequest.of(page, size);
         Page<PropertyResponse> response = propertyService.getHostProperties(host, pageable);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/pending")
+    public ResponseEntity<Page<PropertyResponse>> getPendingProperties(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        Pageable pageable = PageRequest.of(page, size);
+        Page<PropertyResponse> response = propertyService.getPendingProperties(pageable);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<PropertyResponse> approveProperty(@PathVariable UUID id) {
+        User admin = getAuthenticatedUser();
+        PropertyResponse response = propertyService.approveProperty(id, admin);
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<PropertyResponse> rejectProperty(
+            @PathVariable UUID id,
+            @RequestBody RejectionRequest rejectionRequest) {
+        User admin = getAuthenticatedUser();
+        PropertyResponse response = propertyService.rejectProperty(id, rejectionRequest.getReason(), admin);
         return ResponseEntity.ok(response);
     }
 
