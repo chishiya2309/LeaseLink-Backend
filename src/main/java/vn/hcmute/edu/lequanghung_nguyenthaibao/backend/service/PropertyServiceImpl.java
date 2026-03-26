@@ -186,6 +186,12 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional(readOnly = true)
+    public Page<PropertyResponse> getApprovedProperties(Pageable pageable) {
+        return propertyRepository.findByStatus(PropertyStatus.APPROVED, pageable).map(this::mapToResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public PropertyResponse getProperty(UUID id) {
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Property not found"));
