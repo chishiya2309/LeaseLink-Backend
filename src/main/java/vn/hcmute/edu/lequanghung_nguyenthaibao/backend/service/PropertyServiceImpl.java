@@ -1,15 +1,19 @@
 package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.PropertyRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.SearchPropertyRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.response.PropertyResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.*;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.enums.PropertyStatus;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.AreaRepository;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.PropertyRepository;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.PropertySpecification;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.RoomTypeRepository;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.UUID;
@@ -20,6 +24,7 @@ import org.springframework.data.domain.Pageable;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PropertyServiceImpl implements PropertyService {
 
     private final PropertyRepository propertyRepository;
@@ -131,6 +136,7 @@ public class PropertyServiceImpl implements PropertyService {
     @Override
     @Transactional
     public void deleteProperty(UUID id, User user) {
+        log.info("Deleting property: {}", id);
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Property not found"));
 
@@ -139,7 +145,9 @@ public class PropertyServiceImpl implements PropertyService {
             throw new IllegalArgumentException("You are not authorized to delete this property.");
         }
 
-        propertyRepository.delete(property);
+        property.setStatus(PropertyStatus.DELETED);
+        propertyRepository.save(property);
+        log.info("Deleted property: {}", id);
     }
 
     @Override
@@ -188,6 +196,14 @@ public class PropertyServiceImpl implements PropertyService {
     @Transactional(readOnly = true)
     public Page<PropertyResponse> getApprovedProperties(Pageable pageable) {
         return propertyRepository.findByStatus(PropertyStatus.APPROVED, pageable).map(this::mapToResponse);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<PropertyResponse> searchProperties(SearchPropertyRequest request,
+                                                   Pageable pageable) {
+        Specification<Property> spec = PropertySpecification.buildBasicSearchSpecification(request);
+        return propertyRepository.findAll(spec, pageable).map(this::mapToResponse);
     }
 
     @Override

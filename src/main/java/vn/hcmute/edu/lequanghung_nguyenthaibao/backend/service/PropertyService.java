@@ -1,6 +1,7 @@
 package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service;
 
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.PropertyRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.SearchPropertyRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.response.PropertyResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.User;
 
@@ -23,4 +24,6 @@ public interface PropertyService {
     PropertyResponse approveProperty(UUID id, User admin);
     PropertyResponse rejectProperty(UUID id, String reason, User admin);
     Page<PropertyResponse> getApprovedProperties(Pageable pageable);
+    Page<PropertyResponse> searchProperties(SearchPropertyRequest request,
+                                            Pageable pageable);
 }

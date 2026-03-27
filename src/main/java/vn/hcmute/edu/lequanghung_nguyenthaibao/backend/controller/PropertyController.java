@@ -12,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.access.prepost.PreAuthorize;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.PropertyRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.RejectionRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.SearchPropertyRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.response.PropertyResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.User;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.UserRepository;
@@ -103,6 +104,36 @@ public class PropertyController {
             @RequestParam(defaultValue = "10") int size) {
         Pageable pageable = PageRequest.of(page, size);
         Page<PropertyResponse> response = propertyService.getPendingProperties(pageable);
+        return ResponseEntity.ok(response);
+    }
+
+    /**
+     * UC03 — Tìm kiếm và lọc cơ bản (Basic Search & Filter).
+     * Public endpoint. Tất cả params đều optional.
+     * Ngoại lệ A2: Nếu tất cả bộ lọc trống → Lấy tất cả bài APPROVED, sắp xếp mới nhất.
+     */
+    @GetMapping("/search")
+    public ResponseEntity<Page<PropertyResponse>> searchProperties(
+            @RequestParam(required = false) Long areaId,
+            @RequestParam(required = false) Long roomTypeId,
+            @RequestParam(required = false) java.math.BigDecimal minPrice,
+            @RequestParam(required = false) java.math.BigDecimal maxPrice,
+            @RequestParam(required = false) Short bedrooms,
+            @RequestParam(required = false) boolean allowPets,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "8") int size) {
+
+        SearchPropertyRequest request = new SearchPropertyRequest();
+        request.setAreaId(areaId);
+        request.setRoomTypeId(roomTypeId);
+        request.setMinPrice(minPrice);
+        request.setMaxPrice(maxPrice);
+        request.setBedrooms(bedrooms);
+        request.setAllowPets(allowPets);
+
+        // Sắp xếp ngày đăng mới nhất (Descending) theo UC03 spec
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending());
+        Page<PropertyResponse> response = propertyService.searchProperties(request, pageable);
         return ResponseEntity.ok(response);
     }
 
