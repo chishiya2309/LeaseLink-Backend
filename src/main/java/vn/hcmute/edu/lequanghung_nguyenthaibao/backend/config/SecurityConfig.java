@@ -49,6 +49,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.POST, "/users/verify-reset-code").permitAll()
                         .requestMatchers(HttpMethod.POST, "/users/reset-password").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/v1/ai/search").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/properties/approved").permitAll()
 
                         // Chi Admin mới có quyền duyệt tin
                         .requestMatchers("/api/v1/properties/pending/**").hasRole("ADMIN")

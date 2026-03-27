@@ -119,7 +119,7 @@ public class UserServiceImpl implements UserService {
         }
 
         if (user.getStatus() == UserStatus.LOCKED) {
-            throw new AccountLockedException("Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin để mở khóa.");
+            throw new AccountLockedException("Tài khoản của bạn đã bị khóa, vui lòng liên hệ admin nếu có thắc mắc");
         }
 
         Role selectedRole;

@@ -22,4 +22,5 @@ public interface PropertyService {
     Page<PropertyResponse> getAllProperties(PropertyStatus status, Pageable pageable);
     PropertyResponse approveProperty(UUID id, User admin);
     PropertyResponse rejectProperty(UUID id, String reason, User admin);
+    Page<PropertyResponse> getApprovedProperties(Pageable pageable);
 }

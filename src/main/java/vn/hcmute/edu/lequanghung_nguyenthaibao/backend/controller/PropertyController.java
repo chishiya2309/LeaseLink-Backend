@@ -106,6 +106,16 @@ public class PropertyController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/approved")
+    public ResponseEntity<Page<PropertyResponse>> getApprovedProperties(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        // Sort by createdAt DESC to show newest first
+        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending());
+        Page<PropertyResponse> response = propertyService.getApprovedProperties(pageable);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<PropertyResponse>> getAllProperties(
