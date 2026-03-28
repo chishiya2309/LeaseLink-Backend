@@ -1,9 +1,12 @@
-package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service;
+package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.PropertyPageResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.PropertyRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.SearchPropertyRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.response.PropertyResponse;
@@ -21,6 +24,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.PropertyService;
 
 @Service
 @RequiredArgsConstructor
@@ -200,10 +204,30 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<PropertyResponse> searchProperties(SearchPropertyRequest request,
-                                                   Pageable pageable) {
+    public PropertyPageResponse searchProperties(SearchPropertyRequest request,
+                                                 int page, int size) {
+        log.info("Searching properties with criteria: {}", request);
+
+        Sort.Order order = new Sort.Order(Sort.Direction.DESC, "createdAt");
+
+        int pageNo = 0;
+        if (page > 0) {
+            pageNo = page - 1;
+        }
+
+        Pageable pageable = PageRequest.of(pageNo, size, Sort.by(order));
+        Page<Property> entityPage;
+
         Specification<Property> spec = PropertySpecification.buildBasicSearchSpecification(request);
-        return propertyRepository.findAll(spec, pageable).map(this::mapToResponse);
+        entityPage = propertyRepository.findAll(spec, pageable);
+
+        PropertyPageResponse response = new PropertyPageResponse();
+        response.setProperties(entityPage.getContent().stream().map(this::mapToResponse).toList());
+        response.setPageNumber(entityPage.getNumber());
+        response.setPageSize(entityPage.getSize());
+        response.setTotalPages(entityPage.getTotalPages());
+        response.setTotalElements(entityPage.getTotalElements());
+        return response;
     }
 
     @Override

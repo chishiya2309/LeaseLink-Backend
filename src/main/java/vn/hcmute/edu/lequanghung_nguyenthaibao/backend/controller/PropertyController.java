@@ -1,7 +1,9 @@
 package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +12,7 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.access.prepost.PreAuthorize;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.PropertyPageResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.PropertyRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.RejectionRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.SearchPropertyRequest;
@@ -19,7 +22,9 @@ import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.UserRepository
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.PropertyService;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.PropertyMediaService;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,6 +34,7 @@ import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.enums.PropertyStatu
 @RestController
 @RequestMapping("/api/v1/properties")
 @RequiredArgsConstructor
+@Slf4j(topic = "PROPERTY-CONTROLLER")
 public class PropertyController {
 
     private final PropertyService propertyService;
@@ -107,34 +113,21 @@ public class PropertyController {
         return ResponseEntity.ok(response);
     }
 
-    /**
-     * UC03 — Tìm kiếm và lọc cơ bản (Basic Search & Filter).
-     * Public endpoint. Tất cả params đều optional.
-     * Ngoại lệ A2: Nếu tất cả bộ lọc trống → Lấy tất cả bài APPROVED, sắp xếp mới nhất.
-     */
+    @Operation(summary = "Tìm kiếm bất động sản", description = "Cho phép tìm kiếm bất động sản theo bộ lọc")
     @GetMapping("/search")
-    public ResponseEntity<Page<PropertyResponse>> searchProperties(
-            @RequestParam(required = false) Long areaId,
-            @RequestParam(required = false) Long roomTypeId,
-            @RequestParam(required = false) java.math.BigDecimal minPrice,
-            @RequestParam(required = false) java.math.BigDecimal maxPrice,
-            @RequestParam(required = false) Short bedrooms,
-            @RequestParam(required = false) boolean allowPets,
+    public Map<String, Object> searchProperties(
+            @RequestBody(required = false) SearchPropertyRequest req,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "8") int size) {
 
-        SearchPropertyRequest request = new SearchPropertyRequest();
-        request.setAreaId(areaId);
-        request.setRoomTypeId(roomTypeId);
-        request.setMinPrice(minPrice);
-        request.setMaxPrice(maxPrice);
-        request.setBedrooms(bedrooms);
-        request.setAllowPets(allowPets);
+        log.info("Search properties with filters: {}", req);
 
-        // Sắp xếp ngày đăng mới nhất (Descending) theo UC03 spec
-        Pageable pageable = PageRequest.of(page, size, org.springframework.data.domain.Sort.by("createdAt").descending());
-        Page<PropertyResponse> response = propertyService.searchProperties(request, pageable);
-        return ResponseEntity.ok(response);
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", HttpStatus.OK.value());
+        result.put("message", "Search properties with filters");
+        result.put("data", propertyService.searchProperties(req, page, size));
+
+        return result;
     }
 
     @GetMapping("/approved")
