@@ -140,6 +140,13 @@ public class PropertyController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/{id}")
+    public ResponseEntity<PropertyResponse> getProperty(@PathVariable UUID id) {
+        log.info("Getting property details for id: {}", id);
+        PropertyResponse response = propertyService.getProperty(id);
+        return ResponseEntity.ok(response);
+    }
+
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<PropertyResponse>> getAllProperties(
