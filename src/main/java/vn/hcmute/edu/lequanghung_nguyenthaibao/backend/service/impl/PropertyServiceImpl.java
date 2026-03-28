@@ -256,6 +256,16 @@ public class PropertyServiceImpl implements PropertyService {
     }
 
     @Override
+    @Transactional
+    @CacheEvict(value = {"approved_properties", "property_search"}, allEntries = true)
+    public void hidePropertiesByOwner(UUID ownerId) {
+        log.info("Hiding all public properties for owner: {}", ownerId);
+        int hiddenApproved = propertyRepository.bulkHideByOwnerId(ownerId, PropertyStatus.APPROVED, PropertyStatus.HIDDEN);
+        int hiddenPending = propertyRepository.bulkHideByOwnerId(ownerId, PropertyStatus.PENDING, PropertyStatus.HIDDEN);
+        log.info("Ẩn {} bài APPROVED và {} bài PENDING của Host {}", hiddenApproved, hiddenPending, ownerId);
+    }
+
+    @Override
     @Transactional(readOnly = true)
     @Cacheable(value = "properties", key = "#id")
     public PropertyResponse getProperty(UUID id) {

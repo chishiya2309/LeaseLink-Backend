@@ -27,4 +27,5 @@ public interface PropertyService {
     Page<PropertyResponse> getApprovedProperties(Pageable pageable);
     PropertyPageResponse searchProperties(SearchPropertyRequest request,
                                           int page, int size);
+    void hidePropertiesByOwner(UUID ownerId);
 }

@@ -60,6 +60,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/v1/properties/*/approve").hasRole("ADMIN")
                         .requestMatchers("/api/v1/properties/*/reject").hasRole("ADMIN")
 
+                        // Admin-only: Quản lý Host
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
+
                         // Quản lý bất động sản (Dashboard) - Chỉ HOST và ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/v1/properties").hasRole("HOST")
                         .requestMatchers(HttpMethod.PUT, "/api/v1/properties/**").hasAnyRole("HOST", "ADMIN")
