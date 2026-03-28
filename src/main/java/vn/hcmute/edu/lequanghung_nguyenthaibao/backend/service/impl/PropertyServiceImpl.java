@@ -1,15 +1,25 @@
-package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service;
+package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.impl;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.PropertyPageResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.PropertyRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.SearchPropertyRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.response.PropertyResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.*;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.enums.PropertyStatus;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.AreaRepository;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.PropertyRepository;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.PropertySpecification;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.RoomTypeRepository;
+import org.springframework.data.jpa.domain.Specification;
 
 import java.util.List;
 import java.util.UUID;
@@ -17,9 +27,11 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.PropertyService;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class PropertyServiceImpl implements PropertyService {
 
     private final PropertyRepository propertyRepository;
@@ -28,11 +40,14 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional
-    public PropertyResponse createProperty(PropertyRequest request, List<String> imageUrls, String videoUrl, User host) {
+    @CacheEvict(value = { "approved_properties", "property_search" }, allEntries = true)
+    public PropertyResponse createProperty(PropertyRequest request, List<String> imageUrls, String videoUrl,
+            User host) {
         Area area = areaRepository.findById(request.getAreaId())
                 .orElseThrow(() -> new IllegalArgumentException("Area not found with id: " + request.getAreaId()));
         RoomType roomType = roomTypeRepository.findById(request.getRoomTypeId())
-                .orElseThrow(() -> new IllegalArgumentException("RoomType not found with id: " + request.getRoomTypeId()));
+                .orElseThrow(
+                        () -> new IllegalArgumentException("RoomType not found with id: " + request.getRoomTypeId()));
 
         Property property = new Property();
         property.setHost(host);
@@ -70,7 +85,12 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional
-    public PropertyResponse updateProperty(UUID id, PropertyRequest request, List<String> imageUrls, String videoUrl, User host) {
+    @Caching(evict = {
+            @CacheEvict(value = "properties", key = "#id"),
+            @CacheEvict(value = { "approved_properties", "property_search" }, allEntries = true)
+    })
+    public PropertyResponse updateProperty(UUID id, PropertyRequest request, List<String> imageUrls, String videoUrl,
+            User host) {
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Property not found"));
 
@@ -130,7 +150,12 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "properties", key = "#id"),
+            @CacheEvict(value = { "approved_properties", "property_search" }, allEntries = true)
+    })
     public void deleteProperty(UUID id, User user) {
+        log.info("Deleting property: {}", id);
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Property not found"));
 
@@ -139,7 +164,9 @@ public class PropertyServiceImpl implements PropertyService {
             throw new IllegalArgumentException("You are not authorized to delete this property.");
         }
 
-        propertyRepository.delete(property);
+        property.setStatus(PropertyStatus.DELETED);
+        propertyRepository.save(property);
+        log.info("Deleted property: {}", id);
     }
 
     @Override
@@ -165,6 +192,10 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "properties", key = "#id"),
+            @CacheEvict(value = { "approved_properties", "property_search" }, allEntries = true)
+    })
     public PropertyResponse approveProperty(UUID id, User admin) {
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Property not found"));
@@ -176,6 +207,10 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = "properties", key = "#id"),
+            @CacheEvict(value = { "approved_properties", "property_search" }, allEntries = true)
+    })
     public PropertyResponse rejectProperty(UUID id, String reason, User admin) {
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Property not found"));
@@ -186,12 +221,43 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "approved_properties", key = "#pageable.pageNumber + '-' + #pageable.pageSize")
     public Page<PropertyResponse> getApprovedProperties(Pageable pageable) {
         return propertyRepository.findByStatus(PropertyStatus.APPROVED, pageable).map(this::mapToResponse);
     }
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(value = "property_search", key = "#request.hashCode() + '-' + #page + '-' + #size")
+    public PropertyPageResponse searchProperties(SearchPropertyRequest request,
+            int page, int size) {
+        log.info("Searching properties with criteria: {}", request);
+
+        Sort.Order order = new Sort.Order(Sort.Direction.DESC, "createdAt");
+
+//        int pageNo = 0;
+//        if (page > 0) {
+//            pageNo = page - 1;
+//        }
+
+        Pageable pageable = PageRequest.of(page, size, Sort.by(order));
+        Page<Property> entityPage;
+
+        Specification<Property> spec = PropertySpecification.buildBasicSearchSpecification(request);
+        entityPage = propertyRepository.findAll(spec, pageable);
+
+        PropertyPageResponse response = new PropertyPageResponse();
+        response.setProperties(entityPage.getContent().stream().map(this::mapToResponse).toList());
+        response.setPageNumber(entityPage.getNumber());
+        response.setPageSize(entityPage.getSize());
+        response.setTotalPages(entityPage.getTotalPages());
+        response.setTotalElements(entityPage.getTotalElements());
+        return response;
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    @Cacheable(value = "properties", key = "#id")
     public PropertyResponse getProperty(UUID id) {
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Property not found"));
@@ -199,7 +265,8 @@ public class PropertyServiceImpl implements PropertyService {
     }
 
     private boolean userHasRole(User user, String roleCode) {
-        if (user == null || user.getRoles() == null) return false;
+        if (user == null || user.getRoles() == null)
+            return false;
         return user.getRoles().stream()
                 .anyMatch(role -> roleCode.equals(role.getCode()));
     }

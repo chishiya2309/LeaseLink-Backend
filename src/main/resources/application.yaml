@@ -5,13 +5,23 @@ spring:
   application:
     name: backend-service
   profiles:
-    active: "@spring.profiles.active@"
+    active: @spring.profiles.active@
   config:
     import: optional:file:.env[.properties]
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 150MB
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT}
+      username: default
+      password: ${REDIS_PASSWORD}
+    cache:
+      type: redis
+      redis:
+        time-to-live: 600000 # 10 minutes default
+        cache-null-values: false
 
 management:
   endpoints:

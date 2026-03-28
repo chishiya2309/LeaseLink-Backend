@@ -2,17 +2,17 @@
 
 **1. Tên Use Case:** Tìm kiếm và lọc cơ bản (Basic Search & Filter)
 **2. Actor chính:** Guest (Khách truy cập)
-**3. Mục tiêu:** Cho phép Khách tìm kiếm các căn bất động sản đúng theo nhu cầu thuê mướn dựa trên các tiêu chí cụ thể (giá, loại từ khóa).
-**4. Mô tả ngắn:** Guest sử dụng thanh tìm kiếm truyền thống, nhập từ khóa tìm kiếm và chọn các Dropdown menu bộ lọc để query kết quả chi tiết.
+**3. Mục tiêu:** Cho phép Khách tìm kiếm các căn bất động sản đúng theo nhu cầu thuê mướn dựa trên các tiêu chí cụ thể (loại bất động sản (Nhà, Chung Cư, Căn Hộ), khu vực (quận/huyện), diện tích, số phòng ngủ).
+**4. Mô tả ngắn:** Guest sử dụng thanh tìm kiếm chọn các Dropdown menu bộ lọc để query kết quả chi tiết.
 **5. Tiền điều kiện:** 
-   - Website đang hiển thị luồng public cho người dùng ngoài.
+   - Website đang hiển thị luồng public cho người dùng ngoài.;
    - Cơ sở dữ liệu tồn tại các bài bất động sản đang ở trạng thái CÔNG KHAI (`APPROVED`).
 **6. Hậu điều kiện:** Hệ thống trả về list các bài đăng khớp hoàn toàn với các truy vấn của Guest, xếp hạng bằng thuật toán (VD: Mới nhất).
-**7. Kích hoạt:** Nhập Text vào ô Search Box và / hoặc thay đổi thông số Bộ lọc. Nhấn "Tìm kiếm".
+**7. Kích hoạt:** Thay đổi thông số Bộ lọc. Nhấn "Tìm kiếm".
 
 **8. Luồng chính (Main Flow):**
-  1. Guest quan sát khu vực thanh Search Component ở Trang Chủ hoặc Trang Danh Sách.
-  2. Guest điền từ khóa hoặc tinh chỉnh Dropdown:
+  1. Guest quan sát khu vực thanh Search Component ở Trang Chủ.
+  2. Guest tinh chỉnh Dropdown:
      - Khu vực (Ví dụ: Quận Ngũ Hành Sơn, Quận Sơn Trà...).
      - Lọc theo Mức Giá (VD: < 5 Tr, 5-10 Tr).
      - Loại Bất Động Sản (Có 3 loại chính: Nhà nguyên căn, Chung cư, Căn hộ).
@@ -25,8 +25,8 @@
   8. Hiển thị tính năng thanh Phân trang (Pagination) ở dưới cùng.
 
 **9. Luồng ngoại lệ (Exception Flow):**
-  - **A1. Không tìm thấy bài viết (Empty List):** Hệ thống query xong trả về kết quả 0 matches. Front-End hiển thị thông báo "Không tìm thấy kết quả phù hợp với tiêu chí. Bạn hãy mở rộng bộ lọc" và hiển thị các Icon liên quan tới AI search.
-  - **A2. Khách để trống thanh công cụ:** Nếu Guest chỉ cần nhấn nút "Search" rỗng, hệ thống sẽ bỏ qua mọi Parameter và lấy lệnh "Lấy tất cả căn, sắp xếp ngày đăng gần nhất (Descending)".
+  - **A1. Không tìm thấy bài viết (Empty List):** Hệ thống query xong trả về kết quả 0 matches. Front-End hiển thị thông báo "Không tìm thấy kết quả phù hợp với tiêu chí. Bạn hãy điều chỉnh bộ lọc" và hiển thị các Icon liên quan tới AI search.
+  - **A2. Khách để trống bộ lọc:** Nếu Guest chỉ cần nhấn nút "Search" rỗng, hệ thống sẽ bỏ qua mọi Parameter và lấy lệnh "Lấy tất cả căn, sắp xếp ngày đăng gần nhất (Descending)".
 
 **10. Quy tắc nghiệp vụ (Business Rules):**
   - CHỈ fetch và hiển thị những `properties` ở tình trạng `APPROVED`. Không lộ các bài `PENDING`, `LOCKED`, hoặc `HIDDEN`.

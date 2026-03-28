@@ -1,7 +1,9 @@
 package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller;
 
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -10,15 +12,19 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.security.access.prepost.PreAuthorize;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.PropertyPageResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.PropertyRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.RejectionRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.request.SearchPropertyRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.response.PropertyResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.User;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.UserRepository;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.PropertyService;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.PropertyMediaService;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -28,6 +34,7 @@ import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.enums.PropertyStatu
 @RestController
 @RequestMapping("/api/v1/properties")
 @RequiredArgsConstructor
+@Slf4j(topic = "PROPERTY-CONTROLLER")
 public class PropertyController {
 
     private final PropertyService propertyService;
@@ -104,6 +111,23 @@ public class PropertyController {
         Pageable pageable = PageRequest.of(page, size);
         Page<PropertyResponse> response = propertyService.getPendingProperties(pageable);
         return ResponseEntity.ok(response);
+    }
+
+    @Operation(summary = "Tìm kiếm bất động sản", description = "Cho phép tìm kiếm bất động sản theo bộ lọc")
+    @GetMapping("/search")
+    public Map<String, Object> searchProperties(
+            SearchPropertyRequest req,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "8") int size) {
+
+        log.info("Search properties with filters: {}", req);
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("status", HttpStatus.OK.value());
+        result.put("message", "Search properties with filters");
+        result.put("data", propertyService.searchProperties(req, page, size));
+
+        return result;
     }
 
     @GetMapping("/approved")
