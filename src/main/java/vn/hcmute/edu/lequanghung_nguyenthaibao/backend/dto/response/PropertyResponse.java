@@ -3,6 +3,9 @@ package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.dto.response;
 import lombok.Getter;
 import lombok.Setter;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.enums.PropertyStatus;
+
+import java.io.Serial;
+import java.io.Serializable;
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.util.List;
@@ -10,7 +13,10 @@ import java.util.UUID;
 
 @Setter
 @Getter
-public class PropertyResponse {
+public class PropertyResponse implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
 
     private UUID id;
     private UUID hostId;
@@ -34,7 +40,9 @@ public class PropertyResponse {
     
     @Setter
     @Getter
-    public static class ImageResponse {
+    public static class ImageResponse implements Serializable {
+        @Serial
+        private static final long serialVersionUID = 1L;
         private UUID id;
         private String imageUrl;
         private Boolean isThumbnail;

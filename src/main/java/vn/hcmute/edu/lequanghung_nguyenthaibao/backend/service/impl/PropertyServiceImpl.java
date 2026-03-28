@@ -221,7 +221,10 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "approved_properties", key = "#pageable.pageNumber + '-' + #pageable.pageSize")
+    @Cacheable(
+            value = "approved_properties",
+            key = "'page=' + #pageable.pageNumber + ':size=' + #pageable.pageSize + ':sort=' + #pageable.sort.toString()"
+    )
     public Page<PropertyResponse> getApprovedProperties(Pageable pageable) {
         return propertyRepository.findByStatus(PropertyStatus.APPROVED, pageable).map(this::mapToResponse);
     }
@@ -235,12 +238,10 @@ public class PropertyServiceImpl implements PropertyService {
 
         Sort.Order order = new Sort.Order(Sort.Direction.DESC, "createdAt");
 
-//        int pageNo = 0;
-//        if (page > 0) {
-//            pageNo = page - 1;
-//        }
+        int pageNo = Math.max(page, 0);
+        int pageSize = Math.max(size, 1);
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(order));
+        Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by(order));
         Page<Property> entityPage;
 
         Specification<Property> spec = PropertySpecification.buildBasicSearchSpecification(request);

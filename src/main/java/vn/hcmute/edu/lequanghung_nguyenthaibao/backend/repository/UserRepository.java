@@ -16,16 +16,46 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByPhone(String phone);
     Optional<User> findByEmail(String email);
 
-    @Query("""
-            SELECT u FROM User u JOIN u.roles r
-            WHERE r.code = :roleCode
-            AND (:query IS NULL OR :query = ''
-                 OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :query, '%'))
-                 OR LOWER(u.email) LIKE LOWER(CONCAT('%', :query, '%'))
-                 OR u.phone LIKE CONCAT('%', :query, '%'))
-            AND (:status IS NULL OR u.status = :status)
+    @Query(value = """
+            SELECT u FROM User u
+            WHERE EXISTS (SELECT 1 FROM User u2 JOIN u2.roles r WHERE u2 = u AND r.code = :roleCode)
+            AND (CAST(:query AS string) IS NULL OR CAST(:query AS string) = ''
+                 OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%'))
+                 OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%'))
+                 OR u.phone LIKE CONCAT('%', CAST(:query AS string), '%'))
+            """,
+            countQuery = """
+            SELECT COUNT(u) FROM User u
+            WHERE EXISTS (SELECT 1 FROM User u2 JOIN u2.roles r WHERE u2 = u AND r.code = :roleCode)
+            AND (CAST(:query AS string) IS NULL OR CAST(:query AS string) = ''
+                 OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%'))
+                 OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%'))
+                 OR u.phone LIKE CONCAT('%', CAST(:query AS string), '%'))
             """)
     Page<User> findAllByRoleCode(
+            @Param("roleCode") String roleCode,
+            @Param("query") String query,
+            Pageable pageable);
+
+    @Query(value = """
+            SELECT u FROM User u
+            WHERE EXISTS (SELECT 1 FROM User u2 JOIN u2.roles r WHERE u2 = u AND r.code = :roleCode)
+            AND (CAST(:query AS string) IS NULL OR CAST(:query AS string) = ''
+                 OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%'))
+                 OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%'))
+                 OR u.phone LIKE CONCAT('%', CAST(:query AS string), '%'))
+            AND u.status = :status
+            """,
+            countQuery = """
+            SELECT COUNT(u) FROM User u
+            WHERE EXISTS (SELECT 1 FROM User u2 JOIN u2.roles r WHERE u2 = u AND r.code = :roleCode)
+            AND (CAST(:query AS string) IS NULL OR CAST(:query AS string) = ''
+                 OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%'))
+                 OR LOWER(u.email) LIKE LOWER(CONCAT('%', CAST(:query AS string), '%'))
+                 OR u.phone LIKE CONCAT('%', CAST(:query AS string), '%'))
+            AND u.status = :status
+            """)
+    Page<User> findAllByRoleCodeAndStatus(
             @Param("roleCode") String roleCode,
             @Param("query") String query,
             @Param("status") UserStatus status,

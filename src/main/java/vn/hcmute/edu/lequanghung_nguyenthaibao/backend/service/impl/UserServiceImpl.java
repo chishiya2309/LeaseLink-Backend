@@ -7,6 +7,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.config.BrevoProperties;
@@ -375,6 +377,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin_hosts", allEntries = true)
     public UUID adminCreateHost(AdminCreateHostRequest request) {
         log.info("[ADMIN] Tạo tài khoản Host mới cho email: {}", request.getEmail());
 
@@ -407,6 +410,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional
+    @CacheEvict(value = "admin_hosts", allEntries = true)
     public AdminUserResponse adminToggleUserStatus(UUID userId, UserStatus newStatus, String reason, UUID currentAdminId) {
         log.info("[ADMIN] Thay đổi trạng thái user {} -> {}, bởi admin {}", userId, newStatus, currentAdminId);
 
@@ -437,9 +441,16 @@ public class UserServiceImpl implements UserService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(
+            value = "admin_hosts",
+            key = "'q=' + (#query == null ? '' : #query.trim().toLowerCase()) + ':status=' + (#status == null ? 'ALL' : #status.name()) + ':page=' + #pageable.pageNumber + ':size=' + #pageable.pageSize + ':sort=' + #pageable.sort.toString()"
+    )
     public Page<AdminUserResponse> adminFindAllHosts(String query, UserStatus status, Pageable pageable) {
-        return userRepository.findAllByRoleCode("HOST", query, status, pageable)
-                .map(this::mapToAdminUserResponse);
+        Page<User> hosts = status == null
+                ? userRepository.findAllByRoleCode("HOST", query, pageable)
+                : userRepository.findAllByRoleCodeAndStatus("HOST", query, status, pageable);
+
+        return hosts.map(this::mapToAdminUserResponse);
     }
 
     private AdminUserResponse mapToAdminUserResponse(User user) {

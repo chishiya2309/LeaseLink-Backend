@@ -1,6 +1,8 @@
 package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.base.BaseEntity;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.enums.PropertyStatus;
 import java.math.BigDecimal;
@@ -11,6 +13,8 @@ import java.util.UUID;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+@Setter
+@Getter
 @Entity
 @Table(name = "properties")
 public class Property extends BaseEntity {
@@ -85,141 +89,4 @@ public class Property extends BaseEntity {
         image.setProperty(null);
     }
 
-    // --- Getters & Setters ---
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public User getHost() {
-        return host;
-    }
-
-    public void setHost(User host) {
-        this.host = host;
-    }
-
-    public Area getArea() {
-        return area;
-    }
-
-    public void setArea(Area area) {
-        this.area = area;
-    }
-
-    public RoomType getRoomType() {
-        return roomType;
-    }
-
-    public void setRoomType(RoomType roomType) {
-        this.roomType = roomType;
-    }
-
-    public String getTitle() {
-        return title;
-    }
-
-    public void setTitle(String title) {
-        this.title = title;
-    }
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
-
-    public String getAddressLine() {
-        return addressLine;
-    }
-
-    public void setAddressLine(String addressLine) {
-        this.addressLine = addressLine;
-    }
-
-    public BigDecimal getMonthlyPrice() {
-        return monthlyPrice;
-    }
-
-    public void setMonthlyPrice(BigDecimal monthlyPrice) {
-        this.monthlyPrice = monthlyPrice;
-    }
-
-    public BigDecimal getAreaM2() {
-        return areaM2;
-    }
-
-    public void setAreaM2(BigDecimal areaM2) {
-        this.areaM2 = areaM2;
-    }
-
-    public Short getBedrooms() {
-        return bedrooms;
-    }
-
-    public void setBedrooms(Short bedrooms) {
-        this.bedrooms = bedrooms;
-    }
-
-    public Boolean getAllowPets() {
-        return allowPets;
-    }
-
-    public void setAllowPets(Boolean allowPets) {
-        this.allowPets = allowPets;
-    }
-
-    public PropertyStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(PropertyStatus status) {
-        this.status = status;
-    }
-
-    public User getApprovedBy() {
-        return approvedBy;
-    }
-
-    public void setApprovedBy(User approvedBy) {
-        this.approvedBy = approvedBy;
-    }
-
-    public OffsetDateTime getApprovedAt() {
-        return approvedAt;
-    }
-
-    public void setApprovedAt(OffsetDateTime approvedAt) {
-        this.approvedAt = approvedAt;
-    }
-
-    public String getRejectedReason() {
-        return rejectedReason;
-    }
-
-    public void setRejectedReason(String rejectedReason) {
-        this.rejectedReason = rejectedReason;
-    }
-
-    public OffsetDateTime getDeletedAt() {
-        return deletedAt;
-    }
-
-    public void setDeletedAt(OffsetDateTime deletedAt) {
-        this.deletedAt = deletedAt;
-    }
-
-    public List<PropertyImage> getImages() {
-        return images;
-    }
-
-    public void setImages(List<PropertyImage> images) {
-        this.images = images;
-    }
 }

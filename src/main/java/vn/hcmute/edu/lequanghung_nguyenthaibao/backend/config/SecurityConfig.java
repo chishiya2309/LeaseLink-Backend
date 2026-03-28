@@ -54,6 +54,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/properties/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/areas").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/room-types").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // Chi Admin mới có quyền duyệt tin
                         .requestMatchers("/api/v1/properties/pending/**").hasRole("ADMIN")

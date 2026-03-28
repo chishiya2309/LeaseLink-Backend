@@ -2,6 +2,7 @@ package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -69,6 +70,7 @@ public class BrevoEmailService implements EmailService {
         }
     }
 
+    @Async
     @Override
     public void sendHostCredentialEmail(String recipientEmail, String recipientName, String rawPassword) {
         validateConfiguration();

@@ -38,7 +38,9 @@ public class AdminUserController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) UserStatus status,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "15") int size) {
+            @RequestParam(defaultValue = "12") int size) {
+
+        log.info("Lấy danh sách Host");
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<AdminUserResponse> result = userService.adminFindAllHosts(query, status, pageable);
