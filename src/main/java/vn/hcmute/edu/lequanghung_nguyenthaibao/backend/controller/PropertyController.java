@@ -116,7 +116,7 @@ public class PropertyController {
     @Operation(summary = "Tìm kiếm bất động sản", description = "Cho phép tìm kiếm bất động sản theo bộ lọc")
     @GetMapping("/search")
     public Map<String, Object> searchProperties(
-            @RequestBody(required = false) SearchPropertyRequest req,
+            SearchPropertyRequest req,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "8") int size) {
 
