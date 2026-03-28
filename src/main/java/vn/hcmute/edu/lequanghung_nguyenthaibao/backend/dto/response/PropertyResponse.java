@@ -15,6 +15,7 @@ public class PropertyResponse {
     private UUID id;
     private UUID hostId;
     private String hostName;
+    private String hostPhone;
     private Long areaId;
     private String areaName;
     private Long roomTypeId;

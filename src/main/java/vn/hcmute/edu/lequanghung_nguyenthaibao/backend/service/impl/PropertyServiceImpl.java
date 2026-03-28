@@ -276,7 +276,12 @@ public class PropertyServiceImpl implements PropertyService {
         response.setId(property.getId());
         if (property.getHost() != null) {
             response.setHostId(property.getHost().getId());
-            response.setHostName(property.getHost().getEmail());
+            String hostName = property.getHost().getFullName();
+            if (hostName == null || hostName.isEmpty()) {
+                hostName = property.getHost().getEmail();
+            }
+            response.setHostName(hostName);
+            response.setHostPhone(property.getHost().getPhone());
         }
         if (property.getArea() != null) {
             response.setAreaId(property.getArea().getId());
