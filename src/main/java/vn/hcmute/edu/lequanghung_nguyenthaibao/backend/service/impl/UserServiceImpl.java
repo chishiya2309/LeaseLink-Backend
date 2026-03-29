@@ -39,6 +39,7 @@ import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.RevokedJtiRepo
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.RoleRepository;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.UserRepository;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.EmailService;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.NotificationService;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.PropertyService;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.UserService;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.util.JwtUtil;
@@ -66,6 +67,7 @@ public class UserServiceImpl implements UserService {
     private final EmailService emailService;
     private final BrevoProperties brevoProperties;
     private final PropertyService propertyService;
+    private final NotificationService notificationService;
 
     @Override
     public List<UserResponse> findAll() {
@@ -110,6 +112,7 @@ public class UserServiceImpl implements UserService {
                 .orElseThrow(() -> new RuntimeException("Lỗi hệ thống: Role HOST không tồn tại trong database"));
         user.getRoles().add(hostRole);
         userRepository.save(user);
+        notificationService.notifyAdminsNewHostRegistration(user);
         log.info("Đăng ký thành công User ID: {}", user.getId());
 
         return user.getId();

@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.User;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model.enums.UserStatus;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -15,6 +16,12 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByEmail(String email);
     boolean existsByPhone(String phone);
     Optional<User> findByEmail(String email);
+
+    @Query("""
+            SELECT u FROM User u
+            WHERE EXISTS (SELECT 1 FROM User u2 JOIN u2.roles r WHERE u2 = u AND r.code = :roleCode)
+            """)
+    List<User> findUsersByRoleCode(@Param("roleCode") String roleCode);
 
     @Query(value = """
             SELECT u FROM User u
