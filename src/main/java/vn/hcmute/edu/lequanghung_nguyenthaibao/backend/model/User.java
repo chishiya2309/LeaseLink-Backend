@@ -46,6 +46,9 @@ public class User extends BaseEntity {
     @Column(name = "deleted_at")
     private OffsetDateTime deletedAt;
 
+    @Column(name = "lock_reason", columnDefinition = "TEXT")
+    private String lockReason;
+
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(
             name = "user_roles",

@@ -54,11 +54,15 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/v1/properties/{id}").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/areas").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/v1/room-types").permitAll()
+                        .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         // Chi Admin mới có quyền duyệt tin
                         .requestMatchers("/api/v1/properties/pending/**").hasRole("ADMIN")
                         .requestMatchers("/api/v1/properties/*/approve").hasRole("ADMIN")
                         .requestMatchers("/api/v1/properties/*/reject").hasRole("ADMIN")
+
+                        // Admin-only: Quản lý Host
+                        .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 
                         // Quản lý bất động sản (Dashboard) - Chỉ HOST và ADMIN
                         .requestMatchers(HttpMethod.POST, "/api/v1/properties").hasRole("HOST")

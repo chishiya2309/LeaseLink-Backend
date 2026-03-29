@@ -3,16 +3,22 @@ package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.impl;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.config.BrevoProperties;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.AdminCreateHostRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.ForgotPasswordRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.ResetPasswordRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.UserLoginRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.UserRegisterRequest;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.request.VerifyResetCodeRequest;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.AdminUserResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.LoginResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.ResetPasswordVerifyResponse;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.controller.response.UserResponse;
@@ -33,6 +39,7 @@ import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.RevokedJtiRepo
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.RoleRepository;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.repository.UserRepository;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.EmailService;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.PropertyService;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.UserService;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.util.JwtUtil;
 
@@ -58,6 +65,7 @@ public class UserServiceImpl implements UserService {
     private final PasswordResetTokenTxService passwordResetTokenTxService;
     private final EmailService emailService;
     private final BrevoProperties brevoProperties;
+    private final PropertyService propertyService;
 
     @Override
     public List<UserResponse> findAll() {
@@ -367,6 +375,108 @@ public class UserServiceImpl implements UserService {
         refreshTokenRepository.revokeAllByUser(user, "Password reset", now);
     }
 
+    @Override
+    @Transactional
+    @CacheEvict(value = "admin_hosts", allEntries = true)
+    public UUID adminCreateHost(AdminCreateHostRequest request) {
+        log.info("[ADMIN] Tạo tài khoản Host mới cho email: {}", request.getEmail());
+
+        if (userRepository.existsByEmail(request.getEmail())) {
+            throw new ResourceAlreadyExistsException("Email này đã tồn tại trong hệ thống.");
+        }
+        if (userRepository.existsByPhone(request.getPhone())) {
+            throw new ResourceAlreadyExistsException("Số điện thoại này đã tồn tại trong hệ thống.");
+        }
+
+        String rawPassword = generateRandomPassword();
+
+        User user = new User();
+        user.setFullName(request.getFullName());
+        user.setEmail(request.getEmail());
+        user.setPhone(request.getPhone());
+        user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        user.setStatus(UserStatus.ACTIVE);
+
+        Role hostRole = roleRepository.findByCode("HOST")
+                .orElseThrow(() -> new RuntimeException("Lỗi hệ thống: Role HOST không tồn tại trong database"));
+        user.getRoles().add(hostRole);
+        userRepository.save(user);
+        log.info("[ADMIN] Đã tạo Host ID: {}", user.getId());
+
+        emailService.sendHostCredentialEmail(request.getEmail(), request.getFullName(), rawPassword);
+
+        return user.getId();
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = "admin_hosts", allEntries = true)
+    public AdminUserResponse adminToggleUserStatus(UUID userId, UserStatus newStatus, String reason, UUID currentAdminId) {
+        log.info("[ADMIN] Thay đổi trạng thái user {} -> {}, bởi admin {}", userId, newStatus, currentAdminId);
+
+        if (userId.equals(currentAdminId)) {
+            throw new IllegalArgumentException("Admin không thể tự khóa tài khoản của chính mình.");
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy người dùng với ID: " + userId));
+
+        user.setStatus(newStatus);
+
+        if (newStatus == UserStatus.LOCKED) {
+            user.setLockReason(reason);
+            // Revoke all sessions
+            authSessionRepository.deactivateAllByUser(user);
+            refreshTokenRepository.revokeAllByUser(user, "Admin locked account: " + reason, OffsetDateTime.now());
+            log.info("[ADMIN] Đã thu hồi toàn bộ session của user {}", userId);
+            // Hide all properties
+            propertyService.hidePropertiesByOwner(userId);
+        } else if (newStatus == UserStatus.ACTIVE) {
+            user.setLockReason(null);
+        }
+
+        userRepository.save(user);
+        return mapToAdminUserResponse(user);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    @Cacheable(
+            value = "admin_hosts",
+            key = "'q=' + (#query == null ? '' : #query.trim().toLowerCase()) + ':status=' + (#status == null ? 'ALL' : #status.name()) + ':page=' + #pageable.pageNumber + ':size=' + #pageable.pageSize + ':sort=' + #pageable.sort.toString()"
+    )
+    public Page<AdminUserResponse> adminFindAllHosts(String query, UserStatus status, Pageable pageable) {
+        Page<User> hosts = status == null
+                ? userRepository.findAllByRoleCode("HOST", query, pageable)
+                : userRepository.findAllByRoleCodeAndStatus("HOST", query, status, pageable);
+
+        return hosts.map(this::mapToAdminUserResponse);
+    }
+
+    private AdminUserResponse mapToAdminUserResponse(User user) {
+        AdminUserResponse resp = new AdminUserResponse();
+        resp.setId(user.getId());
+        resp.setFullName(user.getFullName());
+        resp.setEmail(user.getEmail());
+        resp.setPhone(user.getPhone());
+        resp.setStatus(user.getStatus());
+        resp.setLockReason(user.getLockReason());
+        resp.setLastLoginAt(user.getLastLoginAt());
+        resp.setCreatedAt(user.getCreatedAt());
+        user.getRoles().stream().findFirst().ifPresent(role -> {
+            resp.setRoleCode(role.getCode());
+            resp.setRoleName(role.getName());
+        });
+        return resp;
+    }
+
+    private String generateRandomPassword() {
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[6];
+        random.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
     private String generateRandomTokenString() {
         SecureRandom random = new SecureRandom();
         byte[] bytes = new byte[32];
@@ -379,3 +489,4 @@ public class UserServiceImpl implements UserService {
         return String.format("%06d", random.nextInt(1_000_000));
     }
 }
+

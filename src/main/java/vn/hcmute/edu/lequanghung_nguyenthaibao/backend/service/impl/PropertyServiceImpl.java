@@ -40,7 +40,7 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional
-    @CacheEvict(value = { "approved_properties", "property_search" }, allEntries = true)
+    @CacheEvict(value = { "approved_properties", "admin_all_properties", "property_search" }, allEntries = true)
     public PropertyResponse createProperty(PropertyRequest request, List<String> imageUrls, String videoUrl,
             User host) {
         Area area = areaRepository.findById(request.getAreaId())
@@ -87,7 +87,7 @@ public class PropertyServiceImpl implements PropertyService {
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "properties", key = "#id"),
-            @CacheEvict(value = { "approved_properties", "property_search" }, allEntries = true)
+            @CacheEvict(value = { "approved_properties", "admin_all_properties", "property_search" }, allEntries = true)
     })
     public PropertyResponse updateProperty(UUID id, PropertyRequest request, List<String> imageUrls, String videoUrl,
             User host) {
@@ -152,7 +152,7 @@ public class PropertyServiceImpl implements PropertyService {
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "properties", key = "#id"),
-            @CacheEvict(value = { "approved_properties", "property_search" }, allEntries = true)
+            @CacheEvict(value = { "approved_properties", "admin_all_properties", "property_search" }, allEntries = true)
     })
     public void deleteProperty(UUID id, User user) {
         log.info("Deleting property: {}", id);
@@ -183,6 +183,10 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional(readOnly = true)
+    @Cacheable(
+            value = "admin_all_properties",
+            key = "'status=' + (#status == null ? 'ALL' : #status.name()) + ':page=' + #pageable.pageNumber + ':size=' + #pageable.pageSize + ':sort=' + #pageable.sort.toString()"
+    )
     public Page<PropertyResponse> getAllProperties(PropertyStatus status, Pageable pageable) {
         if (status != null) {
             return propertyRepository.findByStatus(status, pageable).map(this::mapToResponse);
@@ -194,7 +198,7 @@ public class PropertyServiceImpl implements PropertyService {
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "properties", key = "#id"),
-            @CacheEvict(value = { "approved_properties", "property_search" }, allEntries = true)
+            @CacheEvict(value = { "approved_properties", "admin_all_properties", "property_search" }, allEntries = true)
     })
     public PropertyResponse approveProperty(UUID id, User admin) {
         Property property = propertyRepository.findById(id)
@@ -209,7 +213,7 @@ public class PropertyServiceImpl implements PropertyService {
     @Transactional
     @Caching(evict = {
             @CacheEvict(value = "properties", key = "#id"),
-            @CacheEvict(value = { "approved_properties", "property_search" }, allEntries = true)
+            @CacheEvict(value = { "approved_properties", "admin_all_properties", "property_search" }, allEntries = true)
     })
     public PropertyResponse rejectProperty(UUID id, String reason, User admin) {
         Property property = propertyRepository.findById(id)
@@ -221,7 +225,10 @@ public class PropertyServiceImpl implements PropertyService {
 
     @Override
     @Transactional(readOnly = true)
-    @Cacheable(value = "approved_properties", key = "#pageable.pageNumber + '-' + #pageable.pageSize")
+    @Cacheable(
+            value = "approved_properties",
+            key = "'page=' + #pageable.pageNumber + ':size=' + #pageable.pageSize + ':sort=' + #pageable.sort.toString()"
+    )
     public Page<PropertyResponse> getApprovedProperties(Pageable pageable) {
         return propertyRepository.findByStatus(PropertyStatus.APPROVED, pageable).map(this::mapToResponse);
     }
@@ -235,12 +242,10 @@ public class PropertyServiceImpl implements PropertyService {
 
         Sort.Order order = new Sort.Order(Sort.Direction.DESC, "createdAt");
 
-//        int pageNo = 0;
-//        if (page > 0) {
-//            pageNo = page - 1;
-//        }
+        int pageNo = Math.max(page, 0);
+        int pageSize = Math.max(size, 1);
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(order));
+        Pageable pageable = PageRequest.of(pageNo, pageSize, Sort.by(order));
         Page<Property> entityPage;
 
         Specification<Property> spec = PropertySpecification.buildBasicSearchSpecification(request);
@@ -253,6 +258,16 @@ public class PropertyServiceImpl implements PropertyService {
         response.setTotalPages(entityPage.getTotalPages());
         response.setTotalElements(entityPage.getTotalElements());
         return response;
+    }
+
+    @Override
+    @Transactional
+    @CacheEvict(value = {"approved_properties", "admin_all_properties", "property_search"}, allEntries = true)
+    public void hidePropertiesByOwner(UUID ownerId) {
+        log.info("Hiding all public properties for owner: {}", ownerId);
+        int hiddenApproved = propertyRepository.bulkHideByOwnerId(ownerId, PropertyStatus.APPROVED, PropertyStatus.HIDDEN);
+        int hiddenPending = propertyRepository.bulkHideByOwnerId(ownerId, PropertyStatus.PENDING, PropertyStatus.HIDDEN);
+        log.info("Ẩn {} bài APPROVED và {} bài PENDING của Host {}", hiddenApproved, hiddenPending, ownerId);
     }
 
     @Override

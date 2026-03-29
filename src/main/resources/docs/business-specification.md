@@ -151,7 +151,7 @@ Thiết kế CSDL MySQL tối giản và Clean, gồm đúng 5 bảng truy vấn
 - **Flow of Events:**
   1. Admin truy cập mục "Quản lý Host/Chủ nhà".
   2. Hệ thống hiển thị danh sách tất cả Chủ nhà.
-  3. (Cấp mới): Admin nhấn "Thêm Chủ nhà mới" -> Nhập Tên, SĐT, Email, Mật khẩu -> Hệ thống tạo tài khoản và gửi cho Chủ nhà.
+  3. (Cấp mới): Admin nhấn "Thêm Chủ nhà mới" -> Nhập Tên, SĐT, Email -> Hệ thống tạo tài khoản và gửi cho Chủ nhà.
   4. (Quản lý): Admin tìm kiếm/lọc tài khoản cần xử lý và xem chi tiết.
   5. Admin chọn action "Khóa tài khoản" và nhập lý do.
   6. Hệ thống cập nhật trạng thái Locked cho tài khoản đó (Host bị khóa sẽ không đăng nhập được và các tin đăng bị ẩn).

@@ -2,6 +2,7 @@ package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.impl;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientResponseException;
@@ -66,6 +67,92 @@ public class BrevoEmailService implements EmailService {
         } catch (Exception ex) {
             log.error("Unexpected Brevo email error", ex);
             throw new ExternalServiceException("Không thể gửi email reset mật khẩu qua Brevo.");
+        }
+    }
+
+    @Async
+    @Override
+    public void sendHostCredentialEmail(String recipientEmail, String recipientName, String rawPassword) {
+        validateConfiguration();
+
+        RestClient.RequestBodySpec request = restClientBuilder
+                .baseUrl(normalizeBaseUrl(brevoProperties.getBaseUrl()))
+                .build()
+                .post()
+                .uri("/v3/smtp/email")
+                .header("accept", "application/json")
+                .header("content-type", "application/json")
+                .header("api-key", brevoProperties.getApiKey());
+
+        if (brevoProperties.isSandbox()) {
+            request = request.header("X-Sib-Sandbox", "drop");
+        }
+
+        String safeName = recipientName == null || recipientName.isBlank() ? recipientEmail : recipientName;
+
+        String htmlContent = """
+                <!DOCTYPE html>
+                <html lang="vi">
+                  <body style="margin:0;padding:24px;background:#f0fdf4;font-family:Arial,sans-serif;color:#0f172a;">
+                    <div style="max-width:520px;margin:0 auto;background:#ffffff;border:1px solid #d1fae5;border-radius:24px;padding:32px;">
+                      <p style="margin:0 0 12px;font-size:14px;color:#64748b;">LeaseLink Platform</p>
+                      <h1 style="margin:0 0 16px;font-size:24px;line-height:1.3;color:#0d9488;">Chào mừng bạn đến với LeaseLink!</h1>
+                      <p style="margin:0 0 16px;font-size:15px;line-height:1.7;">Xin chào <strong>%s</strong>,</p>
+                      <p style="margin:0 0 16px;font-size:15px;line-height:1.7;">
+                        Tài khoản <strong>Chủ nhà (Host)</strong> của bạn đã được tạo thành công trên hệ thống LeaseLink.
+                        Dưới đây là thông tin đăng nhập của bạn:
+                      </p>
+                      <div style="margin:0 0 18px;padding:20px;border-radius:18px;background:#f0fdf4;border:1px solid #d1fae5;">
+                        <div style="margin-bottom:12px;">
+                          <div style="font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Email đăng nhập</div>
+                          <div style="font-size:16px;font-weight:700;color:#0f172a;">%s</div>
+                        </div>
+                        <div>
+                          <div style="font-size:12px;color:#64748b;font-weight:600;text-transform:uppercase;margin-bottom:4px;">Mật khẩu tạm thời</div>
+                          <div style="font-size:18px;font-weight:700;color:#0d9488;letter-spacing:4px;font-family:monospace;">%s</div>
+                        </div>
+                      </div>
+                      <p style="margin:0 0 12px;font-size:14px;line-height:1.7;color:#dc2626;font-weight:600;">
+                        ⚠️ Vui lòng đổi mật khẩu ngay sau khi đăng nhập lần đầu để bảo mật tài khoản.
+                      </p>
+                      <p style="margin:0;font-size:13px;line-height:1.7;color:#64748b;">
+                        Nếu bạn cần hỗ trợ, vui lòng liên hệ bộ phận quản trị của LeaseLink.
+                      </p>
+                    </div>
+                  </body>
+                </html>
+                """.formatted(safeName, recipientEmail, rawPassword);
+
+        Map<String, Object> payload = Map.of(
+                "sender", Map.of(
+                        "name", brevoProperties.getSenderName(),
+                        "email", brevoProperties.getSenderEmail()
+                ),
+                "to", List.of(Map.of(
+                        "email", recipientEmail,
+                        "name", safeName
+                )),
+                "subject", "LeaseLink - Thông tin tài khoản Chủ nhà của bạn",
+                "htmlContent", htmlContent,
+                "textContent", "Xin chào %s,\n\nTài khoản Host của bạn đã được tạo.\nEmail: %s\nMật khẩu tạm thời: %s\n\nVui lòng đổi mật khẩu ngay sau khi đăng nhập.".formatted(safeName, recipientEmail, rawPassword)
+        );
+
+        try {
+            request
+                    .body(payload)
+                    .retrieve()
+                    .toBodilessEntity();
+            log.info("Đã gửi email thông tin tài khoản Host cho: {}", recipientEmail);
+        } catch (RestClientResponseException ex) {
+            log.error("Brevo error khi gửi credential email: status={}, body={}", ex.getStatusCode(), ex.getResponseBodyAsString(), ex);
+            String responseBody = ex.getResponseBodyAsString();
+            String details = responseBody.isBlank() ? ex.getStatusText() : responseBody;
+            throw new ExternalServiceException("Brevo từ chối gửi email thông tin tài khoản: " + details);
+        } catch (ExternalServiceException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            log.error("Unexpected Brevo email error khi gửi credential email", ex);
+            throw new ExternalServiceException("Không thể gửi email thông tin tài khoản qua Brevo.");
         }
     }
 
