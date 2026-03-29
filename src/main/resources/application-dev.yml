@@ -42,3 +42,6 @@ openapi:
     title: Backend cho web LeaseLink
     version: 1.0.0
     server: http://localhost:${server.port}
+
+cors:
+  allowed-origins: http://localhost:5173,http://localhost:3000
