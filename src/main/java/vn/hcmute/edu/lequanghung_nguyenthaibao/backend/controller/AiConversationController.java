@@ -43,6 +43,13 @@ public class AiConversationController {
 
         try {
             AiSearchCriteria criteria = aiNLPService.extractSearchCriteria(request.getMessage());
+
+            if (criteria.getIsRealEstateQuery() != null && !criteria.getIsRealEstateQuery()) {
+                return ResponseEntity.ok(new AiSearchResponse(
+                        "Tin nhắn của bạn có vẻ không liên quan tới việc tìm kiếm hoặc thuê bất động sản. Mình là trợ lý LeaseLink, bạn hãy mô tả nhu cầu tìm thuê phòng hoặc căn hộ hợp lệ để mình hỗ trợ nhé!",
+                        criteria, List.of()));
+            }
+
             Specification<Property> spec = PropertySpecification.buildBasicAndAiSpecification(criteria);
             List<String> keywords = extractKeywords(criteria);
 
@@ -57,7 +64,8 @@ public class AiConversationController {
         } catch (Exception e) {
             log.error("AI Search failed for client IP {}: {}", clientIp, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(Map.of("message", "Tính năng AI đang tạm gián đoạn. Bạn vui lòng thử lại sau hoặc chuyển sang bộ lọc tìm kiếm cơ bản."));
+                    .body(Map.of("message",
+                            "Tính năng AI đang tạm gián đoạn. Bạn vui lòng thử lại sau hoặc chuyển sang bộ lọc tìm kiếm cơ bản."));
         }
     }
 
