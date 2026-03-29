@@ -36,3 +36,6 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+cors:
+  allowed-origins: ${FRONTEND_URL:http://localhost:5173}
