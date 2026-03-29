@@ -27,6 +27,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.NotificationService;
 import vn.hcmute.edu.lequanghung_nguyenthaibao.backend.service.PropertyService;
 
 @Service
@@ -37,6 +38,7 @@ public class PropertyServiceImpl implements PropertyService {
     private final PropertyRepository propertyRepository;
     private final AreaRepository areaRepository;
     private final RoomTypeRepository roomTypeRepository;
+    private final NotificationService notificationService;
 
     @Override
     @Transactional
@@ -80,7 +82,9 @@ public class PropertyServiceImpl implements PropertyService {
             }
         }
 
-        return mapToResponse(propertyRepository.save(property));
+        Property savedProperty = propertyRepository.save(property);
+        notificationService.notifyAdminsNewProperty(savedProperty);
+        return mapToResponse(savedProperty);
     }
 
     @Override
@@ -145,7 +149,9 @@ public class PropertyServiceImpl implements PropertyService {
             }
         }
 
-        return mapToResponse(propertyRepository.save(property));
+        Property savedProperty = propertyRepository.save(property);
+        notificationService.notifyHostPropertyApproved(savedProperty);
+        return mapToResponse(savedProperty);
     }
 
     @Override
@@ -206,7 +212,10 @@ public class PropertyServiceImpl implements PropertyService {
         property.setStatus(PropertyStatus.APPROVED);
         property.setApprovedBy(admin);
         property.setApprovedAt(java.time.OffsetDateTime.now());
-        return mapToResponse(propertyRepository.save(property));
+        property.setRejectedReason(null);
+        Property savedProperty = propertyRepository.save(property);
+        notificationService.notifyHostPropertyApproved(savedProperty);
+        return mapToResponse(savedProperty);
     }
 
     @Override
@@ -220,7 +229,9 @@ public class PropertyServiceImpl implements PropertyService {
                 .orElseThrow(() -> new IllegalArgumentException("Property not found"));
         property.setStatus(PropertyStatus.REJECTED);
         property.setRejectedReason(reason);
-        return mapToResponse(propertyRepository.save(property));
+        Property savedProperty = propertyRepository.save(property);
+        notificationService.notifyHostPropertyRejected(savedProperty);
+        return mapToResponse(savedProperty);
     }
 
     @Override

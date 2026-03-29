@@ -120,6 +120,30 @@ create table property_images (
 
 );
 
+create table notifications (
+
+                               id uuid primary key default gen_random_uuid(),
+
+                               recipient_id uuid not null references users(id) on delete cascade,
+
+                               type varchar(50) not null,
+
+                               title varchar(160) not null,
+
+                               message text not null,
+
+                               link varchar(255),
+
+                               is_read boolean not null default false,
+
+                               read_at timestamptz,
+
+                               created_at timestamptz not null default now(),
+
+                               updated_at timestamptz not null default now()
+
+);
+
 -- Chi 1 thumbnail/property
 
 create unique index uq_property_thumbnail_true
@@ -262,6 +286,10 @@ create table revoked_jtis (
 create index idx_users_status on users(status);
 
 create unique index idx_users_email_active on users(email) where deleted_at is null;
+
+create index idx_notifications_recipient_created on notifications(recipient_id, created_at desc);
+
+create index idx_notifications_recipient_unread on notifications(recipient_id, is_read);
 
 -- Property search/listing
 
