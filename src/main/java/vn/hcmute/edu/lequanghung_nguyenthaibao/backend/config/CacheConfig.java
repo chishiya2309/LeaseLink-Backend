@@ -36,6 +36,8 @@ public class CacheConfig {
         cacheConfigs.put("properties", defaultConfig.entryTtl(Duration.ofMinutes(15)));
         cacheConfigs.put("approved_properties", defaultConfig.entryTtl(Duration.ofMinutes(10))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jdkSerializer)));
+        cacheConfigs.put("admin_all_properties", defaultConfig.entryTtl(Duration.ofMinutes(5))
+                .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jdkSerializer)));
         cacheConfigs.put("property_search", defaultConfig.entryTtl(Duration.ofMinutes(10)));
         cacheConfigs.put("admin_hosts", defaultConfig.entryTtl(Duration.ofMinutes(5))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jdkSerializer)));
