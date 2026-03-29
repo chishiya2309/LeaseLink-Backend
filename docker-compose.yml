@@ -1,0 +1,31 @@
+version: '3.8'
+
+services:
+  backend:
+    build: .
+    image: leaselink-backend:latest
+    container_name: leaselink-backend
+    ports:
+      - "8080:8080"
+    # Dùng file .env ở cùng thư mục để load các biến môi trường
+    env_file:
+      - .env
+    environment:
+      # Cấu hình buộc chạy profile prod
+      - SPRING_PROFILES_ACTIVE=prod
+      # Ghi đè cấu hình mem limit qua compose nếu cần (ví dụ chạy trên EC2 t3.small)
+      - JAVA_OPTS=-Xms512m -Xmx1024m -XX:+UseG1GC
+    restart: unless-stopped
+    # Giới hạn memory ở mức Docker resource (ngăn OOMKilled host)
+    deploy:
+      resources:
+        limits:
+          memory: 1536M
+        reservations:
+          memory: 512M
+    networks:
+      - leaselink-net
+
+networks:
+  leaselink-net:
+    driver: bridge
