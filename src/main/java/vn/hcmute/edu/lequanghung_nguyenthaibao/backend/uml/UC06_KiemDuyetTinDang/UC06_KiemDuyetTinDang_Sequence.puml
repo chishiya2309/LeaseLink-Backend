@@ -4,62 +4,60 @@ autonumber
 
 actor Admin
 participant "ApprovalListView\n(FE)" as FE
-participant "ModerationController\n(Java)" as Controller
+participant "ApprovalListView\n(FE)" as FE
+participant "PropertyController\n(Java)" as Controller
 participant "PropertyService\n(Java)" as Service
 participant "PropertyRepository\n(JPA)" as Repo
 database "PostgreSQL" as DB
-participant "AuditLogService" as Audit
 participant "NotificationService" as Notify
 
-== Tải Hàng đợi (FIFO) ==
+== Tải danh sách chờ duyệt ==
 Admin -> FE : Click "Duyệt Bài"
-FE -> Controller : GET /moderation/queue
-Controller -> Service : getPendingQueue()
-Service -> Repo : findByStatus('PENDING', Sort.ASC)
-Repo -> DB : SELECT * FROM properties WHERE status='PENDING' ORDER BY created_at ASC
-DB --> Repo : List<Property>
-Repo --> Service : List<Property>
-Service --> Controller : ResponseDTO
-Controller --> FE : JSON List
+FE -> Controller : GET /api/v1/properties/pending
+Controller -> Service : getPendingProperties(pageable)
+Service -> Repo : findByStatus('PENDING', pageable)
+Repo -> DB : SELECT * FROM properties WHERE status='PENDING'
+DB --> Repo : Page<Property>
+Repo --> Service : Page<Property>
+Service --> Controller : PropertyResponse List
+Controller --> FE : JSON Content
 FE --> Admin : Hiển thị bảng danh sách
 
 == Thẩm định chi tiết ==
 Admin -> FE : Click Xem chi tiết bài ID: 123
-FE -> Controller : GET /moderation/detail/123
-Controller -> Service : getModerationDetail(123)
+FE -> Controller : GET /api/v1/properties/123
+Controller -> Service : getProperty(123)
 Service -> Repo : findById(123)
 Repo -> DB : SELECT
 DB --> Repo : Property Object
 Repo --> Service : entity
-Service --> Controller : ModerationDetailDTO
+Service --> Controller : PropertyResponse
 Controller --> FE : JSON Detail
-FE --> Admin : Hiển thị Mockup Guest View
+FE --> Admin : Hiển thị Modal chi tiết
 
 == Quyết định Kiểm duyệt ==
 alt Phê duyệt (Approve)
     Admin -> FE : Click "✅ Duyệt (Approve)"
-    FE -> Controller : POST /moderation/approve/123
-    Controller -> Service : approveProperty(123, admin_id)
-    Service -> Repo : updateStatus(123, 'APPROVED')
-    Repo -> DB : UPDATE properties SET status='APPROVED'
-    Service -> Audit : logAction(admin_id, 123, 'APPROVE')
-    Service -> Notify : sendNotification(host_id, "Tin của bạn đã được duyệt")
-    Service --> Controller : Success
+    FE -> Controller : POST /api/v1/properties/123/approve
+    Controller -> Service : approveProperty(123, admin)
+    Service -> Repo : save(property)
+    Repo -> DB : UPDATE properties SET status='APPROVED', approved_by=admin_id, ...
+    Service -> Notify : notifyHostPropertyApproved(property)
+    Service --> Controller : PropertyResponse
     Controller --> FE : 200 OK
-    FE --> Admin : Toast: "Duyệt thành công"
+    FE --> Admin : Ẩn item & Toast: "Duyệt thành công"
 else Từ chối (Reject)
     Admin -> FE : Click "❌ Từ chối (Reject)"
     FE --> Admin : Hiển thị Reason Dialog
-    Admin -> FE : Nhập/Chọn "Lý do: Đăng sai sự thật"
-    FE -> Controller : POST /moderation/reject/123 (Body: reason)
-    Controller -> Service : rejectProperty(123, admin_id, reason)
-    Service -> Repo : updateStatus(123, 'REJECTED', reason)
-    Repo -> DB : UPDATE properties SET status='REJECTED', reason_message=...
-    Service -> Audit : logAction(admin_id, 123, 'REJECT', reason)
-    Service -> Notify : sendNotification(host_id, "Tin bị từ chối: " + reason)
-    Service --> Controller : Success
+    Admin -> FE : Nhập "Lý do: Hình ảnh mờ"
+    FE -> Controller : POST /api/v1/properties/123/reject (Body: reason)
+    Controller -> Service : rejectProperty(123, reason, admin)
+    Service -> Repo : save(property)
+    Repo -> DB : UPDATE properties SET status='REJECTED', rejected_reason=...
+    Service -> Notify : notifyHostPropertyRejected(property)
+    Service --> Controller : PropertyResponse
     Controller --> FE : 200 OK
-    FE --> Admin : Toast: "Đã gửi phản hồi từ chối"
+    FE --> Admin : Ẩn item & Toast: "Đã gửi phản hồi từ chối"
 end
 
 @enduml

@@ -5,9 +5,11 @@ skinparam SequenceMessageAlign center
 actor "Host" as User
 participant "PropertyFormView" as View
 participant "PropertyController" as Ctrl
-participant "AWS S3\n(Storage)" as S3 <<Cloud>>
-participant "PropertyModel" as PModel
-participant "ImageModel" as IModel
+participant "PropertyMediaService" as MediaService
+participant "S3Service" as S3 <<Cloud>>
+participant "PropertyService" as Service
+participant "PropertyRepository" as Repo
+participant "PropertyImage" as Entity
 database "Database" as DB
 
 == Khởi tạo Form ==
@@ -15,55 +17,46 @@ User -> View: Chọn "Đăng tin mới"
 View --> User: Tải Form nhập liệu trống
 
 == Nhập liệu & Gửi yêu cầu ==
-User -> View: Điền thông tin (Tiêu đề, Giá, Loại BĐS...)
-User -> View: Đính kèm Ảnh/Video (Max 10MB/file)
+User -> View: Điền thông tin & Đính kèm Ảnh/Video
+note right of View: Max 10MB per file
 User -> View: Nhấn "Lưu và Đăng xuất bản"
 
-View -> Ctrl: createProperty(data, files)
+View -> Ctrl: createProperty(data, images, video)
 activate Ctrl
 
-== Kiểm duyệt (Ngoại lệ A3) ==
-Ctrl -> Ctrl: validateInputs(data)\nKiểm tra trường bắt buộc
-Ctrl -> Ctrl: validateFiles(files)\nKiểm tra định dạng, dung lượng
+== Validation (Bean Validation) ==
+Ctrl -> Ctrl: @Valid: Check constraints\n(Title, Price, Area...)
 
-alt A3: Dữ liệu thiếu hoặc File lỗi
-    Ctrl --> View: Trả về lỗi validation
-    View --> User: Hiển thị lỗi đỏ tại input tương ứng
+alt Dữ liệu không hợp lệ
+    Ctrl --> View: 400 Bad Request
+    View --> User: Hiển thị lỗi tương ứng
 else Dữ liệu hợp lệ
 
-    == Upload Media lên Cloud ==
-    group Vòng lặp: Xử lý file
-        loop Cho từng file trong danh sách
-            Ctrl -> S3: uploadFile(file)
-            activate S3
-            note right of S3: Lưu file & Sinh URL
-            S3 --> Ctrl: image_url / video_url
-            deactivate S3
-        end
-    end
+    == Upload Media (Async/Pre-persistence) ==
+    Ctrl -> MediaService: uploadImages(images)
+    activate MediaService
+    MediaService -> S3: uploadFile(file)
+    S3 --> MediaService: image_url
+    MediaService --> Ctrl: List<String> urls
+    deactivate MediaService
 
     == Lưu Cơ sở dữ liệu ==
-    Ctrl -> PModel: insert(data, status='PENDING')
-    activate PModel
-    PModel -> DB: INSERT INTO properties...
-    activate DB
-    DB --> PModel: new_property_id
-    deactivate DB
-    PModel --> Ctrl: new_property_id
-    deactivate PModel
+    Ctrl -> Service: createProperty(data, urls, videoUrl, host)
+    activate Service
+    Service -> Repo: save(property)
+    activate Repo
+    Repo -> DB: INSERT INTO properties (status='PENDING')
+    DB --> Repo: property_id
+    deactivate Repo
 
-    Ctrl -> IModel: insertImages(new_property_id, array_urls)
-    activate IModel
-    IModel -> DB: INSERT INTO images (property_id, url)...
-    activate DB
-    DB --> IModel: success
-    deactivate DB
-    IModel --> Ctrl: success
-    deactivate IModel
+    Service -> Entity: addImage(url)
+    Service -> Repo: save(property)
+    Service --> Ctrl: PropertyResponse
+    deactivate Service
 
     == Phản hồi User ==
-    Ctrl --> View: Thông báo "Thành công, chờ kiểm duyệt"
-    View --> User: Điều hướng về PropertyListView (Danh sách quản lý)
+    Ctrl --> View: 201 Created
+    View --> User: Điều hướng về màn hình Danh sách
 end
 
 deactivate Ctrl
