@@ -8,7 +8,7 @@ start
 
 if (Lựa chọn chức năng?) then (Đăng nhập)
     :Hệ thống hiển thị form Đăng nhập;
-    :Người dùng nhập Email, Mật khẩu, chọn Role;
+    :Người dùng nhập Email, Mật khẩu;
 
     if (Frontend validation sai?) then (Có)
         :Hiển thị lỗi validate;
@@ -31,55 +31,49 @@ if (Lựa chọn chức năng?) then (Đăng nhập)
                     :Trả lời "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ Admin để hỗ trợ.";
                     stop
                 else (Không)
-                    :Kiểm tra role được chọn có tồn tại trong user.roles;
-
-                    if (Role không hợp lệ?) then (Có)
-                        :Tra loi "Tài khoản không có quyền truy cập với vai trò này";
-                        stop
-                    else (Không)
-                        :Cập nhật last_login_at;
-                        :Tạo AuthSession;
-                        :Sinh Refresh Token và lưu DB;
-                        :Sinh Access Token;
-                        :Trả về accessToken, refreshToken, user;
-                        :Frontend lưu token va chuyển hướng;
-                        stop
-                    endif
+                     :Cập nhật last_login_at;
+                     :Tạo AuthSession;
+                     :Sinh Refresh Token và lưu DB;
+                     :Sinh Access Token;
+                     :Trả về accessToken, refreshToken, user;
+                     :Frontend lưu token và chuyển hướng đến dashboard;
+                     stop
                 endif
             endif
         endif
     endif
+else (Đăng ký Host)
+    :Hệ thống hiển thị form Đăng ký Host;
+    :Người dùng nhập Họ tên, Email, Số điện thoại,\nMật khẩu, Xác nhận mật khẩu;
 
-else (Dang ky Host)
-    :He thong hien thi form Dang ky;
-    :Nguoi dung nhap Ho ten, Email, So dien thoai,\nMat khau, Xac nhan mat khau;
-
-    if (Frontend validation sai?) then (Co)
-        :Hien thi loi validate;
+    if (Frontend validation sai?) then (Có)
+        :Hiển thị lỗi validate;
         stop
-    else (Khong)
-        :Gui POST /users/register;
+    else (Không)
+        :Gửi POST /users/register;
 
-        if (Password va Confirm khong khop?) then (Co)
-            :Tra loi "Xac nhan mat khau khong khop";
+        if (Password va Confirm không khớp?) then (Có)
+            :Trả lời "Xác nhận mật khẩu không khớp";
             stop
-        else (Khong)
-            :Kiem tra email da ton tai;
+        else (Không)
+            :Kiểm tra email đã tồn tại;
 
-            if (Email da ton tai?) then (Co)
-                :Tra loi "Email nay da duoc dang ky";
+            if (Email đã tồn tại?) then (Có)
+                :Trả lời "Email này đã được đăng ký";
                 stop
             else (Khong)
-                :Kiem tra so dien thoai da ton tai;
+                :Kiểm tra số điện thoại đã tồn tại;
 
-                if (So dien thoai da ton tai?) then (Co)
-                    :Tra loi "So dien thoai nay da duoc dang ky";
+                if (Số điện thoại đã tồn tại?) then (Có)
+                    :Tra loi "Số điện thoại này đã được đăng ký";
                     stop
                 else (Khong)
-                    :Ma hoa mat khau bang BCrypt;
-                    :Gan role HOST;
-                    :Luu user voi status = PENDING;
-                    :Tra thong bao dang ky thanh cong;
+                    :Mã hóa mật khẩu bằng BCrypt;
+                    :Gán role HOST;
+                    :Lưu user với status = PENDING;
+                    :Gửi thông báo có user mới đăng ký cho Admin;
+                    :Trả thông báo đăng ký thành công;
+                    :Chuyển hướng đến trang đăng nhập;
                     stop
                 endif
             endif
