@@ -2,7 +2,7 @@
 
 **1. Tên Use Case:** Quản lý và Cấp tài khoản Chủ nhà (Manage Host Accounts)
 **2. Actor chính:** Admin (Quản trị viên)
-**3. Mục tiêu:** Khép kín mô hình kinh doanh "Kênh đăng tin sàn đóng". Admin tự phát tài khoản cho đối tác môi giới chuẩn, kiểm soát rủi ro và "Ban/Lock" đối tác nếu có lừa đảo làm mất uy tín.
+**3. Mục tiêu:**: Admin phát tài khoản cho đối tác môi giới chuẩn, kiểm soát rủi ro và "Ban/Lock" đối tác nếu có lừa đảo làm mất uy tín.
 **4. Mô tả ngắn:** Guest vẫn có thể đăng ký được để trở thành Host đăng tin (UC01). Admin có thể Thêm account thủ công. Admin cũng quản lý bảng Data chứa tất cả mọi người dùng nền tảng để Ban nick nếu phát hiện gian lận.
 **5. Tiền điều kiện:**
 
@@ -35,11 +35,5 @@
 
 **11. Dữ liệu vào ra:**
 
-- **Dữ liệu vào (Input):** Form Credential (Email, Sdt, Password, Name). Action Boolean (Lock/Unlock).
+- **Dữ liệu vào (Input):** Form Credential (Email, Sdt, Name). Action Boolean (Lock/Unlock).
 - **Dữ liệu ra (Output):** Object `Host User`, Send Mail Ticket (SMTP server trả log).
-
-**12. Đặc tả lớp MVC cho usecase:**
-
-- **View:** `HostManagementTableListView`, `CreateHostDialogComponent`.
-- **Controller:** `AdminUserController` (Action Create / Action ToggleBan).
-- **Model:** `UserModel` (Tạo DB record, set Hash Pass, Handle Triggers càn quét ẩn Property List đi kèm `PropertyModel`), `MailService`.
