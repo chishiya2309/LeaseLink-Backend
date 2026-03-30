@@ -10,30 +10,25 @@ start
 repeat
     :Guest nhập câu hỏi (Plain text tự nhiên)\nvà nhấn Enter;
 
-    :Kiểm tra Rate-limit (Quy tắc nghiệp vụ);
-    if (Vượt quá 5 lượt/session?) then (Có)
-        :Thông báo "Bạn đã hết lượt chat miễn phí.\nVui lòng thử lại sau.";
-        stop
-    else (Chưa vượt)
-    endif
-
     :Hiển thị Loading Indicator (Animation gõ chữ);
-    :Backend gửi Text kèm System Prompt\nđến AI NLP Service (OpenAI/Gemini);
+    :Backend gửi message kèm System Prompt\nđến GeminiNLPAiProvider\n(POST Gemini API);
 
-    if (Kết nối API Model? [Ngoại lệ A2]) then (Lỗi / Timeout)
-        :Thông báo Fall-back xin lỗi do quá tải;
+    if (Kết nối Gemini API? [Ngoại lệ A2]) then (Lỗi / Timeout)
+        :Trả về 503 SERVICE_UNAVAILABLE\n"Tính năng AI đang tạm gián đoạn...";
         :Định hướng Guest sử dụng\nTìm kiếm bộ lọc (UC03);
         stop
     else (Thành công)
-        :AI phân tích Text và giải nghĩa;
+        :GeminiNLPAiProvider parse response\ntừ candidates[0] sang AiSearchCriteria;
 
-        if (Có Intent tìm nhà rõ ràng? [Ngoại lệ A1]) then (Không)
-            :Trả về UI Chatbot:\n"Yêu cầu chưa cụ thể, bạn mô tả thêm\nđịa điểm hoặc mức giá nhé!";
-        else (Có)
-            :AI bóc tách & trả về JSON Object\n(VD: type, bedrooms, location...);
-            :Truy vấn Database (Semantic / Vector Search)\ndựa trên JSON tiêu chí;
-            :Ghép kết quả tạo chuỗi String phản hồi thân thiện;
-            :Trả về UI: Text Bot nói + Carousels (Thẻ BĐS);
+        if (isRealEstateQuery == false? [Ngoại lệ A1]) then (Không phải BĐS)
+            :Trả về AiSearchResponse:\n"Tin nhắn không liên quan tới BĐS,\nhãy mô tả nhu cầu thuê phòng nhé!";
+        else (Đúng là tìm BĐS)
+            :PropertySpecification.buildBasicAndAiSpecification(criteria)\nTạo Specification<Property> với các predicate AND;
+            :PropertyRepository.findAll(spec)\nTruy vấn DB chỉ lấy status = APPROVED;
+            :extractKeywords(criteria.keywordQuery)\nTách keyword từ keywordQuery;
+            :Sắp xếp kết quả bằng buildSearchRankingComparator\n(ưu tiên keyword match title > description)\nGiới hạn MAX_RESULTS = 10;
+            :generateReplyMessage(criteria, matchCount)\nGhép chuỗi phản hồi thân thiện;
+            :Trả về AiSearchResponse\n(replyMessage, extractedCriteria, List<PropertyResponse>);
         endif
     endif
 
