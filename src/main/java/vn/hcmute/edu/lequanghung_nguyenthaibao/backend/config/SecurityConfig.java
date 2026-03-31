@@ -69,7 +69,8 @@ public class SecurityConfig {
                                                 .requestMatchers("/api/v1/admin/**").hasRole("ADMIN")
 
                                                 // Quản lý bất động sản (Dashboard) - Chỉ HOST và ADMIN
-                                                .requestMatchers(HttpMethod.POST, "/api/v1/properties").hasRole("HOST")
+                                                .requestMatchers(HttpMethod.POST, "/api/v1/properties")
+                                                .hasAnyRole("HOST", "ADMIN")
                                                 .requestMatchers(HttpMethod.PUT, "/api/v1/properties/**")
                                                 .hasAnyRole("HOST", "ADMIN")
                                                 .requestMatchers(HttpMethod.DELETE, "/api/v1/properties/**")
