@@ -93,18 +93,26 @@ public class GeminiNLPAiProvider implements AiNLPService {
         }
 
         String systemInstruction = """
-                Bạn là cộng cụ trích xuất thông tin bất động sản sang JSON.
-                Không bao giờ trả lời bằng text bình thường, chỉ trả lời bằng một chuỗi JSON hợp lệ.
-                Các trường có thể có:
+                Bạn là công cụ trích xuất thông tin tìm hiểu và thuê bất động sản (phòng trọ, nhà ở, căn hộ) sang JSON.
+                Không bao giờ trả lời bằng text thường, chỉ xuất ra một chuỗi JSON hợp lệ.
+                
+                LUẬT LỌC NGHIÊM NGẶT (RẤT QUAN TRỌNG):
+                Bạn phải phân tích ý định của người dùng. Nếu nội dung KHÔNG liên quan đến tìm kiếm, thuê hoặc hỏi về bất động sản (ví dụ: lời chào "hello", hỏi đáp ngoài lề "bún bò ở đâu", tán gẫu, hỏi thời tiết...), bạn PHẢI trả về JSON với chính xác một trường:
+                { "isRealEstateQuery": false }
+                Tuyệt đối không cố gắng nội suy hay gán các từ khóa linh tinh vào biểu mẫu tìm kiếm!
+                
+                Trái lại, nếu nội dung ĐÚNG LÀ nhu cầu tìm kiếm bất động sản hợp lệ, hãy thiết lập:
+                "isRealEstateQuery" (boolean, LUÔN LUÔN trả về true),
+                Cùng với các trường sau (chỉ bao gồm các trường có thông tin trong câu, không có thì để null hoặc bỏ qua):
                 "roomType" (String, vi du: "Nhà", "Chung cư", "Căn hộ"),
                 "area" (String, tên quận/huyện, vi du: "Hải Châu", "Cẩm Lệ"),
                 "bedrooms" (Số nguyên, ví dụ: 1, 2, ...),
                 "allowPets" (boolean, true nếu cho nuôi thú cưng, null nếu không đề cập),
                 "minPrice" (số nguyên),
                 "maxPrice" (số nguyên, lưu ý 10 củ hoặc 10 triệu = 10.000.000 VNĐ),
-                "keywordQuery" (String ngắn chứa các từ khóa mô tả nhu cần còn lại để so khớp title/description, vi du: "full nội thất, có ban công, yên tĩnh gần Cầu Rồng").
-                Chỉ bao gồm các trường có trong câu của người dùng, nếu không có hãy bỏ qua hoặc để null.
-                Với keywordQuery, giữ các ý mô ta phù hợp để so khớp title/description, không lặp lại area, roomType, bedrooms, allowPets, minPrice hoặc maxPrice nếu đã tách thành trường riêng.
+                "keywordQuery" (String ngắn chứa các từ khóa mô tả nhu cầu còn lại để so khớp title/description, vi du: "full nội thất, có ban công, yên tĩnh gần Cầu Rồng").
+                
+                Lưu ý: Với keywordQuery, không lặp lại area, roomType, bedrooms, allowPets, minPrice hoặc maxPrice nếu đã tách thành trường riêng.
                 """;
 
         return systemInstruction + "\n\nNgười dùng: " + prompt;

@@ -4,35 +4,34 @@ skinparam ActivityBackgroundColor #FEFECE
 skinparam ActivityBorderColor #A80036
 
 start
-:Guest truy cập Trang Chủ hoặc Trang Danh Sách;
+:Guest truy cập Trang Chủ;
 :Hệ thống hiển thị thanh Tìm kiếm & Bộ lọc (FilterBox);
 
-:Guest nhập từ khóa hoặc tinh chỉnh Bộ lọc\n(Khu vực, Mức giá, Loại BĐS...);
+:Guest tinh chỉnh bộ lọc\n(Khu vực, Loại phòng, Số phòng ngủ, Mức giá, Có cho phép nuôi thú cưng?);
 :Guest nhấn nút "Tìm kiếm";
 
-if (Tham số tìm kiếm có bị bỏ trống? [Ngoại lệ A2]) then (Có)
+if (Tham số tìm kiếm có bị bỏ trống?) then (Có)
     :Hệ thống bỏ qua các tham số lọc;
-    :Thiết lập truy vấn: Lấy TẤT CẢ bài đăng;
+    :Build PropertySpecification rỗng (lấy toàn bộ bài đăng);
 else (Không)
-    :Hệ thống tóm tắt các tham số Filter (Keyword, Price, Category...);
+    :Controller khởi tạo SearchPropertyRequest;
     :Gửi HTTP GET Request;
-    :Back-End tạo truy vấn (Query) bằng phép AND các điều kiện;
+    :Backend dùng PropertySpecification kết hợp toán tử AND;
 endif
 
-:Áp dụng Quy tắc nghiệp vụ:\nChỉ lấy bài viết có Status = 'APPROVED';
-:Sắp xếp kết quả: Ngày đăng mới nhất (Descending);
-:Thiết lập Phân trang (Limit 10-20 items/page);
+:Chỉ lấy bài viết có Status = 'APPROVED';
+:Sắp xếp kết quả: Ngày đăng mới nhất (createdAt Descending);
+:Thiết lập phân trang (Limit 10-20 items/page);
 :Thực thi truy vấn vào Cơ sở dữ liệu;
 
-if (Số lượng kết quả tìm thấy?) then (0 matches [Ngoại lệ A1])
+if (Số lượng kết quả tìm thấy?) then (0 matches)
     :Trả về mảng rỗng (Empty Array);
     :Hiển thị thông báo "Không tìm thấy kết quả phù hợp...";
-    :Hiển thị gợi ý tính năng AI Search;
 else (> 0 matches)
-    :Trả về JSON mảng Object Property & Tổng số Count;
-    :Front-End render dữ liệu ra màn hình lưới (Grid);
+    :Trả về JSON mảng Object Property & Tổng số count;
+    :Front-end render dữ liệu ra màn hình lưới (Grid);
     :Hiển thị thông tin lên Thẻ Card\n(Ảnh thumbnail, Tiêu đề, Giá, Địa chỉ);
-    :Hiển thị thanh Phân trang (Pagination) ở dưới cùng;
+    :Hiển thị thanh phân trang (Pagination) ở dưới cùng;
 endif
 
 stop

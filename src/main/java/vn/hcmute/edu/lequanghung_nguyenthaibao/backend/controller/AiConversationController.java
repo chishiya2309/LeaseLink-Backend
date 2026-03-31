@@ -23,7 +23,6 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -33,25 +32,24 @@ import java.util.stream.Stream;
 @Slf4j
 public class AiConversationController {
 
-    private static final int MAX_REQUESTS_PER_SESSION = 5;
     private static final int MAX_RESULTS = 10;
 
     private final AiNLPService aiNLPService;
     private final PropertyRepository propertyRepository;
-    private final Map<String, Integer> requestCounts = new ConcurrentHashMap<>();
 
     @PostMapping("/search")
     public ResponseEntity<?> search(@RequestBody AiSearchRequest request, HttpServletRequest httpRequest) {
         String clientIp = httpRequest.getRemoteAddr();
-        int count = requestCounts.getOrDefault(clientIp, 0);
-        if (count >= MAX_REQUESTS_PER_SESSION) {
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
-                    .body(Map.of("message", "Bạn đã đạt giới hạn " + MAX_REQUESTS_PER_SESSION + " lần tìm kiếm AI cho phiên này. Vui lòng thử lại sau hoặc dùng bộ lọc tìm kiếm cơ bản."));
-        }
-        requestCounts.put(clientIp, count + 1);
 
         try {
             AiSearchCriteria criteria = aiNLPService.extractSearchCriteria(request.getMessage());
+
+            if (criteria.getIsRealEstateQuery() != null && !criteria.getIsRealEstateQuery()) {
+                return ResponseEntity.ok(new AiSearchResponse(
+                        "Tin nhắn của bạn có vẻ không liên quan tới việc tìm kiếm hoặc thuê bất động sản. Mình là trợ lý LeaseLink, bạn hãy mô tả nhu cầu tìm thuê phòng hoặc căn hộ hợp lệ để mình hỗ trợ nhé!",
+                        criteria, List.of()));
+            }
+
             Specification<Property> spec = PropertySpecification.buildBasicAndAiSpecification(criteria);
             List<String> keywords = extractKeywords(criteria);
 
@@ -66,7 +64,8 @@ public class AiConversationController {
         } catch (Exception e) {
             log.error("AI Search failed for client IP {}: {}", clientIp, e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-                    .body(Map.of("message", "Tính năng AI đang tạm gián đoạn. Bạn vui lòng thử lại sau hoặc chuyển sang bộ lọc tìm kiếm cơ bản."));
+                    .body(Map.of("message",
+                            "Tính năng AI đang tạm gián đoạn. Bạn vui lòng thử lại sau hoặc chuyển sang bộ lọc tìm kiếm cơ bản."));
         }
     }
 

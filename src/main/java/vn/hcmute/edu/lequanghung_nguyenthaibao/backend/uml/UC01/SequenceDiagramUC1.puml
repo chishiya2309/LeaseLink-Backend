@@ -8,6 +8,7 @@ participant "UserController" as Ctrl
 participant "UserServiceImpl" as Service
 participant "UserRepository" as UserRepo
 participant "RoleRepository" as RoleRepo
+participant "NotificationService" as NotifService
 participant "AuthSessionRepository" as SessionRepo
 participant "RefreshTokenRepository" as RefreshRepo
 participant "PasswordEncoder" as Encoder
@@ -69,6 +70,12 @@ else Frontend validation ok
                             DB --> UserRepo: saved user
                         deactivate UserRepo
 
+                        Service -> NotifService: notifyAdminsNewHostRegistration(user)
+                        activate NotifService
+                            NotifService -> DB: INSERT notification
+                            DB --> NotifService: done
+                        deactivate NotifService
+
                         Service --> Ctrl: userId
                         Ctrl --> View: 201 Created
                     end
@@ -84,7 +91,7 @@ end
 User -> View: Mở trang Đăng nhập
 View --> User: Hiển thị form
 
-User -> View: Nhập email, password, role
+User -> View: Nhập email, password
 User -> View: Nhấn "Đăng nhập"
 View -> View: Frontend validation
 
@@ -148,7 +155,7 @@ else Frontend validation ok
         deactivate Service
     deactivate Ctrl
 
-    View --> User: Lưu token và chuyển hướng sang trang chủ/dashboard
+    View --> User: Lưu token và chuyển hướng sang dashboard
 end
 
 @enduml
