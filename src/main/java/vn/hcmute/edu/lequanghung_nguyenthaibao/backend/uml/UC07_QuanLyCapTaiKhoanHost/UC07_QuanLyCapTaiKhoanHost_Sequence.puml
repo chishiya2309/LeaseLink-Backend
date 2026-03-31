@@ -3,48 +3,123 @@ skinparam actorStyle awesome
 autonumber
 
 actor Admin
-participant "HostManagementView\n(React)" as FE
-participant "AdminUserController\n(Spring)" as Controller
-participant "UserService" as UserService
-participant "UserRepo" as UserRepo
+participant "AdminHostManagement\n(React)" as FE
+participant "AdminUserController" as Controller
+participant "UserServiceImpl" as Service
+participant "UserRepository" as UserRepo
+participant "RoleRepository" as RoleRepo
+participant "PasswordEncoder" as Encoder
+participant "AuthSessionRepository" as SessionRepo
+participant "RefreshTokenRepository" as RefreshRepo
+participant "PropertyService" as PropService
+participant "EmailService" as Mail
 database "PostgreSQL" as DB
-participant "MailService" as Mail
-participant "PropertyService" as PropertyService
 
-== Cấp Account Mới ==
-Admin -> FE : Nhập Data & Click "Submit"
-FE -> Controller : POST /admin/users/create-host
-Controller -> UserService : createHost(dto)
-UserService -> UserRepo : existsByEmail(email)
-UserRepo -> DB : SELECT
-UserService -> UserRepo : existsByPhone(phone)
-UserRepo -> DB : SELECT
-alt Thành công
-    UserService -> UserRepo : save(new HostEntity)
-    UserRepo -> DB : INSERT
-    UserService -> Mail : sendWelcomeEmail(email, password)
-    UserService --> Controller : UserDetails
-    Controller --> FE : 201 Created
-    FE --> Admin : Thông báo Thành công & Link Email
-else Thất bại (Trùng lặp)
-    UserService --> Controller : ConflictException
+== Luồng 1: Xem danh sách Host ==
+Admin -> FE : Truy cập mục "Quản lý Host"
+FE -> Controller : GET /api/v1/admin/hosts?query=&status=&page=0&size=12
+activate Controller
+Controller -> Service : adminFindAllHosts(query, status, pageable)
+activate Service
+Service -> UserRepo : findAllByRoleCode("HOST", query, pageable)\nhoặc findAllByRoleCodeAndStatus("HOST", query, status, pageable)
+activate UserRepo
+UserRepo -> DB : SELECT DISTINCT u.* FROM users u\nJOIN user_roles ... WHERE role_code='HOST'
+DB --> UserRepo : Page<User>
+deactivate UserRepo
+Service --> Controller : Page<AdminUserResponse>
+deactivate Service
+Controller --> FE : 200 OK { data: Page<AdminUserResponse> }
+deactivate Controller
+FE --> Admin : Render bảng Host (tên, email, SĐT, trạng thái, ngày tạo...)
+
+== Luồng 2: Cấp Account Host Mới ==
+Admin -> FE : Click "Thêm Host mới", nhập fullName, email, phone
+FE -> Controller : POST /api/v1/admin/hosts\n{ fullName, email, phone }
+activate Controller
+Controller -> Service : adminCreateHost(request)
+activate Service
+
+Service -> UserRepo : existsByEmail(request.getEmail())
+UserRepo -> DB : SELECT EXISTS
+Service -> UserRepo : existsByPhone(request.getPhone())
+UserRepo -> DB : SELECT EXISTS
+
+alt Email hoặc Phone đã tồn tại
+    Service --> Controller : throw ResourceAlreadyExistsException
     Controller --> FE : 409 Conflict
     FE --> Admin : Báo lỗi "Email/SĐT đã tồn tại"
-end
+else Dữ liệu hợp lệ
+    Service -> Service : generateRandomPassword()
+    Service -> Encoder : encode(rawPassword)
+    Encoder --> Service : passwordHash
 
-== Khóa / Ban Host ==
-Admin -> FE : Click "Ban" + Nhập lý do
-FE -> Controller : POST /admin/users/lock/{id} (reason)
-Controller -> UserService : lockUser(id, reason)
-UserService -> UserRepo : findById(id)
-UserService -> UserRepo : setStatus(id, LOCKED)
-UserRepo -> DB : UPDATE users SET active=false
-UserService -> UserService : invalidateSessions(id)
-note right: Xóa Cookie/JWT\ntrên toàn hệ thống
-UserService -> PropertyService : hideAllPropertiesByOwner(id)
-PropertyService -> DB : UPDATE properties SET status='HIDDEN'\nWHERE owner_id = id
-UserService --> Controller : void
-Controller --> FE : 200 OK
-FE --> Admin : Thông báo "Account & Bài viết\nđã được xử lý"
+    Service -> RoleRepo : findByCode("HOST")
+    RoleRepo -> DB : SELECT role HOST
+    DB --> RoleRepo : Role
+
+    Service -> UserRepo : save(user: status=ACTIVE, role=HOST)
+    UserRepo -> DB : INSERT users, user_roles
+    DB --> UserRepo : saved user
+
+    Service -> Mail : sendHostCredentialEmail(email, fullName, rawPassword)
+
+    Service --> Controller : UUID (newHostId)
+    Controller --> FE : 201 Created { hostId }
+    FE --> Admin : Thông báo thành công,\nemail đã được gửi cho Host
+end
+deactivate Service
+deactivate Controller
+
+== Luồng 3: Khóa tài khoản Host (LOCKED) ==
+Admin -> FE : Click "Khóa" trên row Host + Nhập lý do
+FE -> Controller : PATCH /api/v1/admin/hosts/{id}/status\n{ status: "LOCKED", reason: "..." }
+activate Controller
+Controller -> Service : adminToggleUserStatus(id, LOCKED, reason, currentAdminId)
+activate Service
+
+alt Admin tự khóa chính mình (userId == currentAdminId)
+    Service --> Controller : throw IllegalArgumentException\n"Admin không thể tự khóa tài khoản của chính mình."
+    Controller --> FE : 400 Bad Request
+    FE --> Admin : Báo lỗi
+else Hợp lệ
+    Service -> UserRepo : findById(userId)
+    UserRepo -> DB : SELECT
+    Service -> Service : user.setStatus(LOCKED)\nuser.setLockReason(reason)
+
+    Service -> SessionRepo : deactivateAllByUser(user)
+    SessionRepo -> DB : UPDATE auth_sessions SET is_active=false
+
+    Service -> RefreshRepo : revokeAllByUser(user, "Admin locked account: ...", now)
+    RefreshRepo -> DB : UPDATE refresh_tokens SET revoked_at=now
+
+    Service -> PropService : hidePropertiesByOwner(userId)
+    PropService -> DB : UPDATE properties SET status='HIDDEN'\nWHERE host_id=userId AND status IN ('APPROVED','PENDING')
+
+    Service -> UserRepo : save(user)
+    UserRepo -> DB : UPDATE users
+
+    Service --> Controller : AdminUserResponse
+    Controller --> FE : 200 OK { data: AdminUserResponse,\nmessage: "Tài khoản Host đã bị khóa..." }
+    FE --> Admin : Cập nhật bảng, hiện trạng thái LOCKED
+end
+deactivate Service
+deactivate Controller
+
+== Luồng 4: Mở khóa / Kích hoạt tài khoản (ACTIVE) ==
+Admin -> FE : Click "Mở khóa" (LOCKED) hoặc "Kích hoạt" (PENDING)
+FE -> Controller : PATCH /api/v1/admin/hosts/{id}/status\n{ status: "ACTIVE" }
+activate Controller
+Controller -> Service : adminToggleUserStatus(id, ACTIVE, null, currentAdminId)
+activate Service
+Service -> UserRepo : findById(userId)
+UserRepo -> DB : SELECT
+Service -> Service : user.setStatus(ACTIVE)\nuser.setLockReason(null)
+Service -> UserRepo : save(user)
+UserRepo -> DB : UPDATE users SET status='ACTIVE', lock_reason=NULL
+Service --> Controller : AdminUserResponse
+deactivate Service
+Controller --> FE : 200 OK { data: AdminUserResponse,\nmessage: "Tài khoản Host đã được mở khóa thành công." }
+deactivate Controller
+FE --> Admin : Cập nhật bảng, hiện trạng thái ACTIVE
 
 @enduml

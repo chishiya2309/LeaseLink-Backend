@@ -6,13 +6,14 @@ actor "Khách vãng lai\n(Guest)" as guest
 actor "Chủ nhà\n(Host)" as host
 actor "Quản trị viên\n(Admin)" as admin
 
-package "He thong LeaseLink (UC01 - Xác thực tài khoản)" {
+package "Hệ thống LeaseLink (UC01 - Xác thực tài khoản)" {
     usecase "Đăng ký tài khoản\n(Host)" as UC_Register
     usecase "Đăng nhập hệ thống" as UC_Login
     usecase "Kiểm tra dữ liệu đầu vào\n(email / phone / password / role)" as UC_Validate
-    usecase "Kiểm tra trùng lặp\nEmail / So dien thoai" as UC_CheckDuplicate
+    usecase "Kiểm tra trùng lặp\nEmail / Số điện thoại" as UC_CheckDuplicate
     usecase "Gán role HOST và\nlưu status PENDING" as UC_PersistRegister
-    usecase "Xác thực email / password /\nrole được chọn" as UC_Authenticate
+    usecase "Thông báo cho Admin\n(New Host Registration)" as UC_NotifyAdmin
+    usecase "Xác thực email / password" as UC_Authenticate
     usecase "Tao AuthSession,\nRefresh Token, Access Token" as UC_IssueToken
     usecase "Trả thông báo lỗi" as UC_ShowError
 }
@@ -25,6 +26,7 @@ admin --> UC_Login
 UC_Register ..> UC_Validate : <<include>>
 UC_Register ..> UC_CheckDuplicate : <<include>>
 UC_Register ..> UC_PersistRegister : <<include>>
+UC_Register ..> UC_NotifyAdmin : <<include>>
 
 UC_Login ..> UC_Validate : <<include>>
 UC_Login ..> UC_Authenticate : <<include>>

@@ -6,27 +6,26 @@ actor "Khách truy cập\n(Guest)" as guest
 
 package "Tìm kiếm thông minh bằng AI (UC04)" {
     usecase "Nhập yêu cầu bằng văn bản tự nhiên" as UC_Input
-    usecase "Kiểm tra giới hạn lượt chat\n(Rate-limit)" as UC_CheckLimit
+    usecase "Phân tích NLP & Trích xuất\nAiSearchCriteria (Gemini API)" as UC_Analyze
+    usecase "Kiểm tra isRealEstateQuery\n(Lọc intent không hợp lệ)" as UC_CheckIntent
+    usecase "Truy vấn CSDL\n(Specification + Keyword Ranking)" as UC_Query
+    usecase "Tạo phản hồi thân thiện\n& Hiển thị kết quả BĐS" as UC_Display
 
-    usecase "Phân tích NLP & Trích xuất JSON\n(Gọi API AI LLM)" as UC_Analyze
-    usecase "Truy vấn CSDL\n(Semantic Vector Search)" as UC_Query
-    usecase "Hiển thị phản hồi & Gợi ý BĐS" as UC_Display
-
-    usecase "Yêu cầu làm rõ nội dung\n(Lỗi Intent)" as UC_ErrorIntent
-    usecase "Chuyển hướng Tìm kiếm cơ bản\n(Lỗi API Server)" as UC_Fallback
+    usecase "Yêu cầu mô tả lại\n(Không phải intent BĐS)" as UC_ErrorIntent
+    usecase "Chuyển hướng Tìm kiếm cơ bản\n(Lỗi API Gemini)" as UC_Fallback
 }
 
 ' Tương tác của Actor
 guest --> UC_Input
 
 ' Các mối quan hệ Include (Bắt buộc theo luồng chính)
-UC_Input ..> UC_CheckLimit : <<include>>
 UC_Input ..> UC_Analyze : <<include>>
-UC_Analyze ..> UC_Query : <<include>>
+UC_Analyze ..> UC_CheckIntent : <<include>>
+UC_CheckIntent ..> UC_Query : <<include>>
 UC_Query ..> UC_Display : <<include>>
 
 ' Các mối quan hệ Extend (Luồng ngoại lệ)
-UC_ErrorIntent .up.> UC_Analyze : <<extend>>\n[Văn bản không rõ ràng]
-UC_Fallback .up.> UC_Analyze : <<extend>>\n[Mất kết nối AI API]
+UC_ErrorIntent .up.> UC_CheckIntent : <<extend>>\n[isRealEstateQuery = false]
+UC_Fallback .up.> UC_Analyze : <<extend>>\n[Mất kết nối Gemini API]
 
 @enduml

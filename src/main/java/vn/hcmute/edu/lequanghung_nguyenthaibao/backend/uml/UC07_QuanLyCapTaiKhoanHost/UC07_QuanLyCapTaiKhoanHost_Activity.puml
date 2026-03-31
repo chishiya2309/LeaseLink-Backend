@@ -1,33 +1,75 @@
 @startuml
+skinparam conditionStyle inside
+skinparam ActivityBackgroundColor #FEFECE
+skinparam ActivityBorderColor #A80036
+
 |Admin|
 start
-:Truy cập mục "User Management";
-if (Hành động?) then (Cấp Account Mới)
-  repeat
-    :Click "Add New Account";
-    :Nhập Name, Phone, Email, Pass;
-    |System|
-    :Validate Unique (Email/Phone);
-  repeat while (Dữ liệu trùng lặp?) is (Có/Lỗi)
-  :Tạo Row mới trong DB (Role=Host);
-  :Kích hoạt Email Service;
-  :Gửi SMTP "Welcome Credential";
-  |Admin|
-  :Thông báo "Cấp Account thành công";
-else (Banning / Lock)
-  :Tìm kiếm Host theo Filter SĐT;
-  :Click "Ban / Lock" trên Row;
+:Truy cập mục "Quản lý Host"\ntrên Admin Dashboard;
+
+|System|
+:Hiển thị danh sách Host\n(tên, email, SĐT, trạng thái, phân trang);
+
+|Admin|
+:Chọn hành động;
+
+if (Cấp Account Mới?) then (Có)
+
+  :Click "Thêm Host mới";
+  :Nhập thông tin: họ tên, email, SĐT;
+  :Nhấn "Tạo tài khoản";
+
   |System|
-  :Hiển thị Popup "Nhập lý do Ban";
-  |Admin|
-  :Nhập lý do vi phạm (Bắt buộc);
-  :Xác nhận Ban;
+  :Kiểm tra email và SĐT trùng lặp;
+
+  if (Email hoặc SĐT đã tồn tại?) then (Có)
+    |Admin|
+    :Thông báo lỗi\n"Email/SĐT đã tồn tại";
+    stop
+  else (Không)
+    :Tạo tài khoản Host\n(mật khẩu ngẫu nhiên, trạng thái ACTIVE);
+    :Gửi email thông tin đăng nhập cho Host;
+    |Admin|
+    :Thông báo "Tạo thành công!\nEmail đã được gửi cho Host";
+  endif
+
+elseif (Khóa tài khoản?) then (Có)
+
+  :Tìm kiếm và chọn Host cần khóa;
+  :Click "Khóa";
+
   |System|
-  :Cập nhật `active = false` trong DB;
-  :Xóa Cookie/Session trên mọi thiết bị;
-  :Trigger DB Sweep: Soft Delete toàn bộ bài đăng;
+  :Hiển thị form nhập lý do khóa;
+
   |Admin|
-  :Thông báo "Đã khóa và ẩn mọi bài tin liên quan";
+  :Nhập lý do (tùy chọn);
+  :Nhấn "Xác nhận khóa";
+
+  |System|
+  if (Admin tự khóa chính mình?) then (Có)
+    |Admin|
+    :Thông báo lỗi\n"Không thể tự khóa tài khoản";
+    stop
+  else (Không)
+    :Khóa tài khoản Host;
+    :Hủy toàn bộ phiên đăng nhập hiện tại;
+    :Ẩn toàn bộ bài đăng liên quan;
+    |Admin|
+    :Thông báo "Đã khóa và ẩn\nmọi bài tin liên quan";
+  endif
+
+else (Mở khóa / Kích hoạt)
+
+  |Admin|
+  :Click "Mở khóa" hoặc "Kích hoạt";
+
+  |System|
+  :Cập nhật trạng thái tài khoản về ACTIVE;
+
+  |Admin|
+  :Thông báo "Tài khoản đã được\nmở khóa/kích hoạt";
+
 endif
+
 stop
 @enduml
