@@ -7,27 +7,21 @@ start
 
 :Hệ thống kiểm tra trạng thái bài đăng;
 
-if (Bài đăng còn khả dụng?\n(Không bị ẩn/xóa)) then (Có)
+if (Bài đăng còn khả dụng?) then (Có)
   :Truy xuất dữ liệu chi tiết\n(Ảnh, mô tả, vị trí, giá...);
   :Hiển thị trang Chi tiết bất động sản;
-  
-  while (Khách thuê muốn liên hệ?) is (Có)
-    if (Phương thức liên hệ?) then (Xem SĐT/Zalo)
-      :Hiển thị SĐT và link Zalo;
-      :Khách thuê gọi/nhắn tin ngoài hệ thống;
-    else (Gửi tin nhắn/Message)
-      :Hiển thị form nhập tin nhắn;
-      :Khách thuê nhập nội dung và nhấn Gửi;
-      :Hệ thống lưu tin nhắn và thông báo cho Chủ nhà;
-    endif
-    
-    :Cập nhật trạng thái quan tâm;
-  endwhile (Không)
-  
-else (Không)
-  :Hiển thị thông báo: "Tin này không còn khả dụng";
-  :Điều hướng về trang chủ/danh sách;
-endif
 
-stop
+  if (Khách thuê muốn liên hệ?) then (Có)
+    :Chọn phương thức (Zalo/WhatsApp);
+    :Hệ thống mở liên kết ứng dụng bên thứ 3;
+    stop
+  else (Không)
+    stop
+  endif
+
+else (Không)
+  :Hiển thị lỗi: "Tin không khả dụng";
+  :Điều hướng về Trang chủ;
+  stop
+endif
 @enduml

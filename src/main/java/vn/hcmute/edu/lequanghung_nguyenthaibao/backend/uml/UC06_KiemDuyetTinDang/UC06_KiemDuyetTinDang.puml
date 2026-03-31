@@ -12,7 +12,7 @@ package "LeaseLink System: UC06 - Kiểm duyệt tin đăng" {
     usecase "Từ chối tin (Reject)" as REJECT
     usecase "Nhập lý do từ chối (Reason)" as REASON
     usecase "Gửi thông báo tới Host" as NOTIFY
-    usecase "Ghi Log lịch sử kiểm duyệt" as LOG
+    usecase "Ghi Log lịch sử kiểm duyệt\n(Update DB Fields)" as LOG
 }
 
 Admin -- UC06
@@ -37,8 +37,8 @@ note right of REASON
 end note
 
 note bottom of LOG
-  Lưu ID Admin, thời gian
-  với mục đích truy vết.
+  Cập nhật approvedBy, approvedAt,
+  rejectedReason trong Table Property.
 end note
 
 @enduml

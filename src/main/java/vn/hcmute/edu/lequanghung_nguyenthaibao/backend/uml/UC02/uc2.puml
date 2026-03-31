@@ -4,13 +4,13 @@ skinparam packageStyle rectangle
 
 actor "Chủ nhà\n(Host)" as host
 
-package "Quản lý tin đăng bất động sản (UC02)" {
-    usecase "Thêm tin đăng mới" as UC_Create
-    usecase "Cập nhật tin đăng" as UC_Update
-    usecase "Ẩn/Xóa tin đăng" as UC_Delete
+package "Quản lý tin đăng (UC02)" {
+    usecase "Đăng tin mới\n(Create)" as UC_Create
+    usecase "Cập nhật tin đăng\n(Update)" as UC_Update
+    usecase "Xóa tin đăng\n(Delete)" as UC_Delete
 
-    usecase "Xác thực dữ liệu & File ảnh\n(Validation)" as UC_Validate
-    usecase "Chuyển trạng thái\nChờ duyệt (PENDING)" as UC_SetPending
+    usecase "Xác thực dữ liệu & File\n(Validation)" as UC_Validate
+    usecase "Thiết lập trạng thái\nChờ duyệt (PENDING)" as UC_SetPending
     usecase "Hiển thị lỗi nhập liệu" as UC_Error
 }
 

@@ -7,40 +7,40 @@ start
 :Host truy cập Quản lý tin đăng;
 :Hiển thị danh sách bài đăng;
 
-if (Host chọn thao tác gì?) then (Đăng tin mới)
+if (Host chọn thao tác gì?) then (Thêm tin mới)
     :Hệ thống tải Form trống;
     :Host nhập thông tin (Tiêu đề, Giá, Loại BĐS...);
     :Upload Ảnh/Video (Tối đa 10 ảnh, 1 video);
     :Nhấn "Lưu và Đăng xuất bản";
 
-    if (Dữ liệu & File hợp lệ? [Ngoại lệ A3]) then (Không)
-        :Báo lỗi đỏ tại trường tương ứng\n(Thiếu info hoặc File > 10MB/Sai format);
+    if (Dữ liệu & File hợp lệ?) then (Không)
+        :Báo lỗi đỏ tại trường tương ứng\n(Thiếu info hoặc File > 10MB);
         stop
     else (Có)
-        :Lưu bản ghi Property mới vào DB;
+        :Lưu Property mới vào DB (Status = PENDING);
+    endif
+
+elseif (Chọn thao tác?) then (Cập nhật)
+    :Hệ thống tải dữ liệu cũ vào Form;
+    :Host chỉnh sửa nội dung / thay đổi file;
+    :Nhấn "Lưu và Đăng xuất bản";
+
+    if (Dữ liệu & File hợp lệ?) then (Không)
+        :Báo lỗi tại trường tương ứng;
+        stop
+    else (Có)
+        :Cập nhật Property hiện tại;
         :Thiết lập Trạng thái = PENDING;
     endif
 
-elseif (Chọn thao tác?) then (Cập nhật [Ngoại lệ A1])
-    :Hệ thống fetch dữ liệu cũ vào Form;
-    :Host chỉnh sửa nội dung / thay đổi file;
-    :Nhấn "Cập nhật";
+else (Xóa)
+    :Host nhấn "Xóa";
+    :Hiển thị Popup xác nhận;
 
-    if (Dữ liệu & File hợp lệ? [Ngoại lệ A3]) then (Không)
-        :Báo lỗi đỏ tại trường tương ứng;
-        stop
-    else (Có)
-        :Lưu đè dữ liệu lên Property ID hiện tại;
-        :Đổi Trạng thái về PENDING (Chờ duyệt lại);
-    endif
-
-else (Xóa / Ẩn tin [Ngoại lệ A2])
-    :Hiển thị Popup xác nhận "Bạn có muốn ẩn/xóa?";
-
-    if (Host xác nhận?) then (Hủy)
+    if (Xác nhận?) then (Hủy)
         stop
     else (Đồng ý)
-        :Cập nhật Trạng thái = HIDDEN / DELETED\n(Xóa mềm);
+        :Cập nhật Trạng thái = DELETED;
     endif
 endif
 

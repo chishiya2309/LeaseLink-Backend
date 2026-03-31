@@ -5,7 +5,7 @@ actor "Guest (Khách thuê)" as Guest
 
 package "LeaseLink Marketplace" {
     usecase "UC05: Xem chi tiết bất động sản\n(View Property Details)" as UC05
-    usecase "Liên hệ chủ nhà\n(Contact Host)" as UC05_Contact
+    usecase "Liên hệ \n(Contact)" as UC05_Contact
     usecase "Hiển thị thông báo tin không khả dụng\n(Display 'Not Available' Message)" as UC05_Error
 }
 

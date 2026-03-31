@@ -3,40 +3,40 @@
 start
 :Truy cập mục "Duyệt Bài";
 |System|
-:Truy xuất Hàng đợi PENDING (FIFO);
-if (Queue còn bài?) then (Có)
+:Truy xuất danh sách PENDING;
+if (Danh sách còn bài?) then (Có)
   |Admin|
   repeat
-    :Chọn bài đăng đầu tiên trong Queue;
+    :Chọn 1 bài đăng trong danh sách;
     |System|
-    :Hiển thị chi tiết nội dung (Thẩm định View);
+    :Hiển thị Modal chi tiết nội dung;
     |Admin|
     :Xem xét: Ảnh, Text, Giá, SĐT;
     if (Nội dung đạt chuẩn?) then (Có - Duyệt)
-      :Nhấn Button "Duyệt (Approve)";
+      :Nhấn Button "Duyệt tin ngay";
       |System|
-      :Cập nhật Status = 'APPROVED';
-      :Ghi Log (Admin_ID, Time, Action);
-      :Gửi Notification "Tin đã được đăng";
+      :Status = 'APPROVED';
+      :Ghi Admin_ID, Time vào Property;
+      :Gửi Notification "Tin đã được duyệt";
     else (Không - Từ chối)
-      :Nhấn Button "Từ chối (Reject)";
+      :Nhấn Button "Từ chối tin này";
       |System|
-      :Hiển thị popup Reason Dialog;
+      :Hiển thị Popup lý do (Reason);
       |Admin|
-      :Chọn/Nhập lý do vi phạm (Bắt buộc);
-      :Xác nhận Reject;
+      :Nhập lý do từ chối (Bắt buộc);
+      :Xác nhận Từ chối;
       |System|
-      :Cập nhật Status = 'REJECTED';
-      :Lưu Reason_Message;
-      :Ghi Log (Admin_ID, Time, Action);
-      :Gửi Notification "Yêu cầu chỉnh sửaên";
+      :Status = 'REJECTED';
+      :Lưu rejectedReason vào Property;
+      :Ghi Admin_ID, Time vào Property;
+      :Gửi Notification "Tin bị từ chối: [Lý do]";
     endif
     |System|
-    :Pop Toast thông báo kết quả;
-    :Tự động đẩy bản tiếp theo lên;
+    :Ẩn bài vừa xử lý khỏi danh sách;
+    :Thông báo kết quả (Toast);
   repeat while (Tiếp tục duyệt bài?) is (Đồng ý)
 else (Không)
-  :Thông báo "Hàng đợi trống";
+  :Thông báo "Hiện không có tin chờ duyệt";
 endif
 stop
 @enduml
