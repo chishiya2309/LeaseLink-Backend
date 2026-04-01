@@ -1,0 +1,102 @@
+@startuml
+' === CẤU HÌNH CHO BÁO CÁO A4 ===
+left to right direction
+skinparam dpi 300
+skinparam nodesep 60
+skinparam ranksep 80
+hide circle
+hide methods
+skinparam linetype ortho
+skinparam defaultFontSize 12
+
+skinparam class {
+    BackgroundColor #FAFAFA
+    HeaderBackgroundColor #FFF9C4
+    BorderColor #F57F17
+    ArrowColor #F57F17
+}
+skinparam package {
+    BackgroundColor #FFFFFF
+    BorderColor #9E9E9E
+    FontStyle bold
+    FontSize 14
+}
+
+' Bảng Users (Rút gọn để làm cầu nối)
+entity "users (Rút gọn)" as users {
+    * id : uuid [PK]
+    --
+    * full_name : varchar(120)
+    * email : varchar(255)
+    * status : user_status
+}
+
+' === MODULE: NGHIỆP VỤ LÕI ===
+package "3. Nền tảng Bất động sản (Core)" {
+    entity "properties" {
+        * id : uuid [PK]
+        --
+        * host_id : uuid [FK]
+        * area_id : bigint [FK]
+        * room_type_id : bigint [FK]
+        * title : varchar(255)
+        * address_line : varchar(255)
+        * monthly_price : numeric(14,2)
+        area_m2 : numeric(8,2)
+        bedrooms : smallint
+        allow_pets : boolean
+        * status : property_status
+        approved_by : uuid [FK]
+        * created_at : timestamp
+        * updated_at : timestamp
+    }
+
+    entity "property_images" {
+        * id : uuid [PK]
+        --
+        * property_id : uuid [FK]
+        * image_url : text
+        * is_thumbnail : boolean
+        * sort_order : int
+    }
+
+    entity "areas" {
+        * id : bigint [PK]
+        --
+        * name : varchar(120)
+        * slug : varchar(150)
+        * is_active : boolean
+    }
+
+    entity "room_types" {
+        * id : bigint [PK]
+        --
+        * name : varchar(80)
+        * is_active : boolean
+    }
+}
+
+' === MODULE: TƯƠNG TÁC ===
+package "4. Tương tác Người dùng" {
+    entity "notifications" {
+        * id : uuid [PK]
+        --
+        * recipient_id : uuid [FK]
+        * type : varchar(50)
+        * title : varchar(160)
+        * message : text
+        link : varchar(255)
+        * is_read : boolean
+        * created_at : timestamp
+    }
+}
+
+' === QUAN HỆ ===
+users "1" -- "0..*" properties : "Đăng tin (host_id)"
+users "1" -- "0..*" properties : "Duyệt (approved_by)"
+areas "1" -u- "0..*" properties
+room_types "1" -u- "0..*" properties
+properties "1" *-- "0..*" property_images : "Cascade"
+users "1" *-- "0..*" notifications : "Cascade"
+
+@enduml

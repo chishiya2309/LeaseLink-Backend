@@ -1,0 +1,119 @@
+@startuml
+' === CẤU HÌNH CHO BÁO CÁO A4 ===
+left to right direction
+skinparam dpi 300
+skinparam nodesep 50
+skinparam ranksep 70
+hide circle
+hide methods
+skinparam linetype ortho
+skinparam defaultFontSize 12
+
+skinparam class {
+    BackgroundColor #FAFAFA
+    HeaderBackgroundColor #E1F5FE
+    BorderColor #0277BD
+    ArrowColor #0277BD
+}
+skinparam package {
+    BackgroundColor #FFFFFF
+    BorderColor #9E9E9E
+    FontStyle bold
+    FontSize 14
+}
+
+' === MODULE: NGƯỜI DÙNG & PHÂN QUYỀN ===
+package "1. Người dùng & Phân quyền (RBAC)" {
+    entity "users" {
+        * id : uuid [PK]
+        --
+        * full_name : varchar(120)
+        * email : varchar(255)
+        phone : varchar(20)
+        * password_hash : text
+        * status : user_status
+        last_login_at : timestamp
+        lock_reason : text
+        * created_at : timestamp
+        * updated_at : timestamp
+    }
+
+    entity "roles" {
+        * id : smallint [PK]
+        --
+        * code : varchar(50)
+        * name : varchar(120)
+    }
+
+    entity "permissions" {
+        * id : bigint [PK]
+        --
+        * code : varchar(100)
+        * name : varchar(150)
+    }
+
+    entity "user_roles" {
+        * user_id : uuid [PK, FK]
+        * role_id : smallint [PK, FK]
+    }
+
+    entity "role_permissions" {
+        * role_id : smallint [PK, FK]
+        * permission_id : bigint [PK, FK]
+    }
+}
+
+' === MODULE: XÁC THỰC & BẢO MẬT ===
+package "2. Xác thực & Token (Auth)" {
+    entity "auth_sessions" {
+        * id : uuid [PK]
+        --
+        * user_id : uuid [FK]
+        device_id : varchar(120)
+        user_agent : text
+        ip : varchar(45)
+        * is_active : boolean
+        * expires_at : timestamp
+    }
+
+    entity "refresh_tokens" {
+        * id : uuid [PK]
+        --
+        * session_id : uuid [FK]
+        * user_id : uuid [FK]
+        * token_hash : text
+        * jti : uuid
+        * expires_at : timestamp
+    }
+
+    entity "password_reset_tokens" {
+        * id : uuid [PK]
+        --
+        * user_id : uuid [FK]
+        * email_snapshot : varchar(255)
+        * otp_hash : text
+        * expires_at : timestamp
+        * attempt_count : int
+    }
+
+    entity "revoked_jtis" {
+        * jti : uuid [PK]
+        --
+        * user_id : uuid [FK]
+        * token_type : varchar(20)
+        * expires_at : timestamp
+    }
+}
+
+' === QUAN HỆ ===
+users "1" -- "0..*" user_roles
+roles "1" -- "0..*" user_roles
+roles "1" -- "0..*" role_permissions
+permissions "1" -- "0..*" role_permissions
+
+users "1" *-- "0..*" auth_sessions : "Cascade"
+users "1" *-- "0..*" refresh_tokens : "Cascade"
+users "1" *-- "0..*" revoked_jtis : "Cascade"
+users "1" *-- "0..*" password_reset_tokens : "Cascade"
+auth_sessions "1" *-- "0..*" refresh_tokens : "Cascade"
+@enduml

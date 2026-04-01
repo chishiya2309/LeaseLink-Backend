@@ -14,7 +14,7 @@ package "Hệ thống LeaseLink (UC01 - Xác thực tài khoản)" {
     usecase "Gán role HOST và\nlưu status PENDING" as UC_PersistRegister
     usecase "Thông báo cho Admin\n(New Host Registration)" as UC_NotifyAdmin
     usecase "Xác thực email / password" as UC_Authenticate
-    usecase "Tao AuthSession,\nRefresh Token, Access Token" as UC_IssueToken
+    usecase "Tạo AuthSession,\nRefresh Token, Access Token" as UC_IssueToken
     usecase "Trả thông báo lỗi" as UC_ShowError
 }
 

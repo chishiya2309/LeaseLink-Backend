@@ -1,13 +1,30 @@
 @startuml
-' --- Cấu hình giao diện ---
-skinparam classAttributeIconSize 0
+' === CẤU HÌNH TỐI ƯU CHO BẢO CÁO A4 ===
+left to right direction
+skinparam dpi 300
+skinparam nodesep 50
+skinparam ranksep 70
+' Lược bỏ các chi tiết thừa của Class Diagram để giống ERD hơn
+hide methods
+hide circle              
+
+' Cấu hình giao diện (Màu sắc, Font)
 skinparam linetype ortho
+skinparam defaultFontSize 12
 skinparam class {
-    BackgroundColor #F9F9F9
-    BorderColor #333333
+    BackgroundColor #FAFAFA
+    HeaderBackgroundColor #E1F5FE
+    BorderColor #0277BD
     ArrowColor #0277BD
+    FontSize 14
+    AttributeFontSize 12
 }
-skinparam packageStyle rectangle
+skinparam package {
+    BackgroundColor #FFFFFF
+    BorderColor #9E9E9E
+    FontSize 14
+    FontStyle bold
+}
 
 ' --- ENUMS ---
 package "Kiểu dữ liệu Enum" <<Folder>> {
@@ -49,7 +66,7 @@ package "Phân quyền (RBAC)" {
 }
 
 ' --- NHÓM AUTH & JWT ---
-package "Xác thực & Token (Auth/JWT)" {
+package "Xác thực & Token" {
     class auth_sessions {
         + id : uuid [PK]
         --
@@ -85,10 +102,25 @@ package "Xác thực & Token (Auth/JWT)" {
         expires_at : timestamptz
         revoked_at : timestamptz
     }
+
+    class password_reset_tokens {
+        + id : uuid [PK]
+        --
+        user_id : uuid [FK]
+        email_snapshot : varchar(255)
+        otp_hash : text
+        reset_token_hash : text
+        expires_at : timestamptz
+        verified_at : timestamptz
+        consumed_at : timestamptz
+        attempt_count : integer
+        created_at : timestamptz
+        updated_at : timestamptz
+    }
 }
 
 ' --- NHÓM CORE (NGHIỆP VỤ CHÍNH) ---
-package "Nghiệp vụ Bất động sản (Core)" {
+package "Nghiệp vụ Bất động sản" {
     class users {
         + id : uuid [PK]
         --
@@ -158,6 +190,20 @@ package "Nghiệp vụ Bất động sản (Core)" {
         sort_order : int
         created_at : timestamptz
     }
+
+    class notifications {
+        + id : uuid [PK]
+        --
+        recipient_id : uuid [FK]
+        type : varchar(50)
+        title : varchar(160)
+        message : text
+        link : varchar(255)
+        is_read : boolean
+        read_at : timestamptz
+        created_at : timestamptz
+        updated_at : timestamptz
+    }
 }
 
 ' ==========================================
@@ -165,24 +211,24 @@ package "Nghiệp vụ Bất động sản (Core)" {
 ' ==========================================
 
 ' 1. Quan hệ Core Bất động sản
-users "1" -- "0..*" properties : "Đăng tin (host_id) >"
-users "1" -- "0..*" properties : "Duyệt tin (approved_by) >"
-areas "1" -- "0..*" properties : "Có (area_id) >"
-room_types "1" -- "0..*" properties : "Có (room_type_id) >"
+users "1" --- "0..*" properties : "Đăng/Duyệt"
+areas "1" -up- "0..*" properties : "Có"
+room_types "1" -up- "0..*" properties : "Có"
+properties "1" *-- "0..*" property_images : "Bao gồm"
 
-' Composition (*--): Xóa property thì xóa luôn images (ON DELETE CASCADE)
-properties "1" *-- "0..*" property_images : "Bao gồm >"
+' 2. Quan hệ Auth & JWT
+users "1" *--- "0..*" auth_sessions : "Có"
+users "1" *-- "0..*" refresh_tokens : "Sở hữu"
+users "1" *-- "0..*" revoked_jtis : "Có"
+users "1" *-- "0..*" password_reset_tokens : "Yêu cầu KP"
+auth_sessions "1" *-- "0..*" refresh_tokens : "Chứa"
 
-' 2. Quan hệ Auth & JWT (Tất cả đều CASCADE)
-users "1" *-- "0..*" auth_sessions : "Có >"
-users "1" *-- "0..*" refresh_tokens : "Sở hữu >"
-users "1" *-- "0..*" revoked_jtis : "Có >"
-auth_sessions "1" *-- "0..*" refresh_tokens : "Chứa >"
+' Thông báo
+users "1" --- "0..*" notifications : "Nhận"
 
-' 3. Quan hệ RBAC (Bảng trung gian Many-to-Many)
+' 3. Quan hệ RBAC
 users "1" -- "0..*" user_roles
 roles "1" -- "0..*" user_roles
-
 roles "1" -- "0..*" role_permissions
 permissions "1" -- "0..*" role_permissions
 
