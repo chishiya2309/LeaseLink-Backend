@@ -1,0 +1,22 @@
+@startuml
+skinparam dpi 200
+
+object "admin_01 : Admin" as admin
+object "pending_host : User" as host {
+  id = "host-new-id"
+  email = "newhost@example.com"
+  status = "PENDING"
+}
+object "approved_host : User" as approved_host {
+  id = "host-new-id"
+  status = "ACTIVE"
+}
+object "noti_welcome : Notification" as noti {
+  type = "HOST_APPROVED"
+  message = "Tài khoản Host đã được kích hoạt"
+}
+
+admin --> host : clicks approve
+host => approved_host : status updated
+approved_host --> noti : sends to user
+@enduml

@@ -1,0 +1,32 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam dpi 200
+
+class Admin {
+}
+class AdminPropertyController {
+  + approveProperty(id: UUID): ResponseEntity
+  + rejectProperty(id: UUID, reason: String): ResponseEntity
+}
+class AdminPropertyService {
+  + changePropertyStatus(id: UUID, status: Enum): Property
+}
+class PropertyRepository {
+  + findById(id): Property
+  + save(p: Property): Property
+}
+class NotificationService {
+  + sendReviewResultNotification(hostId, status)
+}
+class Property {
+  + id: UUID
+  + status: property_status
+  + rejectedReason: String
+}
+
+Admin "1" --> "1" AdminPropertyController : manages
+AdminPropertyController "1" --> "1" AdminPropertyService : calls
+AdminPropertyService "1" --> "1" PropertyRepository : uses
+AdminPropertyService "1" --> "1" NotificationService : triggers
+PropertyRepository "1" --> "1" Property : updates
+@enduml

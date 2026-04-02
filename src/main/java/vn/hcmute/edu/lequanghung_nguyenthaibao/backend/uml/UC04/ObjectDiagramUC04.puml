@@ -1,0 +1,22 @@
+@startuml
+skinparam dpi 200
+
+object "guest_truycap : Guest" as guest
+object "ai_msg_req : AiSearchRequest" as req {
+  message = "Tìm phòng trọ Q1 giá tối đa 4 triệu"
+}
+object "nlp_result : AiSearchCriteria" as crit {
+  isRealEstateQuery = true
+  maxPrice = 4000000
+  keywordQuery = "Quận 1, phòng trọ"
+}
+object "found_prop1 : Property" as prop1 {
+  title = "Phòng trọ Nguyễn Đình Chiểu Quận 1"
+  monthlyPrice = 3500000
+  status = "APPROVED"
+}
+
+guest -> req : sends message
+req --> crit : parsed by AI Model into
+crit --> prop1 : matched via Spec to
+@enduml

@@ -1,0 +1,41 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam dpi 200
+
+class Guest {
+}
+class AiConversationController {
+  + searchWithAi(req: AiSearchRequest): AiSearchResponse
+}
+class GeminiNLPAiProvider {
+  + extractSearchCriteria(prompt: String): AiSearchCriteria
+}
+class GeminiAPI <<Cloud>> {
+  + generateContent(prompt: String): JSON
+}
+class AiSearchCriteria {
+  + isRealEstateQuery: boolean
+  + minPrice: Double
+  + maxPrice: Double
+  + keywordQuery: String
+}
+class PropertySpecification {
+  + buildBasicAndAiSpecification(criteria: AiSearchCriteria): Specification
+}
+class PropertyRepository {
+  + findAll(spec: Specification): List<Property>
+}
+class Property {
+  + id: UUID
+  + title: String
+  + status: property_status
+}
+
+Guest "1" --> "1" AiConversationController : calls (POST)
+AiConversationController "1" --> "1" GeminiNLPAiProvider : uses
+GeminiNLPAiProvider "1" --> "1" GeminiAPI : calls HTTP POST
+GeminiNLPAiProvider ..> AiSearchCriteria : returns
+AiConversationController "1" --> "1" PropertySpecification : builds Spec
+AiConversationController "1" --> "1" PropertyRepository : uses
+PropertyRepository "1" --> "*" Property : returns filtered
+@enduml

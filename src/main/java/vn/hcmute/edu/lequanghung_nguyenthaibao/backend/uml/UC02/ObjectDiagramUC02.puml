@@ -1,0 +1,27 @@
+@startuml
+skinparam dpi 200
+
+object "host_A : Host" as host1 {
+  id = "uuid-1234"
+  email = "hostA@gmail.com"
+  fullName = "Nguyen Van A"
+}
+object "req_payload : PropertyRequest" as req {
+  title = "Phòng trọ Q1"
+  monthlyPrice = 5000000
+  areaId = 1
+}
+object "saved_property : Property" as prop {
+  id = "prop-uuid-5678"
+  title = "Phòng trọ Q1"
+  status = "PENDING"
+}
+object "img_thumb : PropertyImage" as img {
+  imageUrl = "https://s3/bucket/image_thumb.jpg"
+  isThumbnail = true
+}
+
+host1 -> req : inputs
+req --> prop : mapped to
+prop *-- img : contains
+@enduml

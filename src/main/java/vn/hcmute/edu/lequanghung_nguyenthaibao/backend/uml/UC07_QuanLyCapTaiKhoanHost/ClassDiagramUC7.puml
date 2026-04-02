@@ -1,0 +1,28 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam dpi 200
+
+class Admin {
+}
+class AdminUserController {
+  + approveHost(hostId: UUID): ResponseEntity
+  + lockHost(hostId: UUID, reason: String): ResponseEntity
+}
+class AdminUserService {
+  + updateUserStatus(userId: UUID, status: user_status): User
+}
+class UserRepository {
+  + findById(id): User
+  + save(u: User): User
+}
+class User {
+  + id: UUID
+  + status: user_status
+  + lockReason: String
+}
+
+Admin "1" --> "1" AdminUserController : selects host
+AdminUserController "1" --> "1" AdminUserService : calls
+AdminUserService "1" --> "1" UserRepository : uses
+UserRepository "1" --> "1" User : updates
+@enduml

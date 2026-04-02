@@ -1,0 +1,40 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam dpi 200
+
+class Host {
+  + id: UUID
+  + email: String
+  + fullName: String
+}
+class PropertyController {
+  + createProperty(req: PropertyRequest, images: List<MultipartFile>): ResponseEntity
+}
+class PropertyService {
+  + createProperty(req: PropertyRequest, hostId: UUID): Property
+}
+class S3Service {
+  + uploadImage(file: MultipartFile): String
+}
+class Property {
+  + id: UUID
+  + title: String
+  + monthlyPrice: Double
+  + status: property_status
+}
+class PropertyImage {
+  + id: UUID
+  + imageUrl: String
+  + isThumbnail: Boolean
+}
+class PropertyRepository {
+  + save(p: Property): Property
+}
+
+Host "1" --> "1" PropertyController : submits
+PropertyController "1" --> "1" PropertyService : calls
+PropertyService "1" --> "1" PropertyRepository : uses
+PropertyService "1" --> "1" S3Service : uses
+PropertyRepository "1" --> "*" Property : saves
+Property "1" *-- "*" PropertyImage : contains
+@enduml

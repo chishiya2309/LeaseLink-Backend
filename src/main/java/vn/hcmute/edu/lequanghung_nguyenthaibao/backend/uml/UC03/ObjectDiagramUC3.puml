@@ -1,0 +1,24 @@
+@startuml
+skinparam dpi 200
+
+object "guest : Guest" as guest
+object "search_req : SearchRequest" as req {
+  areaId = 24
+  minPrice = 2000000
+  maxPrice = 5000000
+}
+object "filter_spec : Specification" as spec {
+  condition1 = "areaId == 24"
+  condition2 = "monthlyPrice BETWEEN 20M AND 50M"
+}
+object "matched_prop : Property" as prop {
+  id = "prop-uuid-999"
+  title = "Phòng trọ Sơn Trà"
+  monthlyPrice = 3000000
+  areaId = 24
+}
+
+guest --> req : inputs
+req --> spec : converted to
+spec --> prop : matches
+@enduml
