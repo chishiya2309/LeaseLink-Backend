@@ -1,0 +1,35 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam dpi 200
+
+class Guest {
+}
+class PropertyController {
+  + getPropertyDetails(id: UUID): ResponseEntity<PropertyDetailResponse>
+}
+class PropertyService {
+  + getPropertyById(id: UUID): Property
+}
+class UserRepository {
+  + findById(id: UUID): User
+}
+class Property {
+  + id: UUID
+  + title: String
+  + monthlyPrice: Double
+  + description: String
+  + hostId: UUID
+}
+class User {
+  + id: UUID
+  + fullName: String
+  + phone: String
+}
+
+Guest "1" --> "1" PropertyController : requests details
+PropertyController "1" --> "1" PropertyService : queries
+PropertyService "1" --> "1" Property : retrieves
+PropertyService "1" --> "1" UserRepository : retrieves host info
+UserRepository "1" --> "1" User : returns
+Property --> User : owned by
+@enduml

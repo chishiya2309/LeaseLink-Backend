@@ -1,0 +1,25 @@
+@startuml
+skinparam dpi 200
+
+object "admin_user : User" as admin {
+  id = "admin-uuid"
+  role = "ADMIN"
+}
+object "pending_property : Property" as prop {
+  id = "prop-pending-123"
+  status = "PENDING"
+}
+object "approved_property : Property" as prop_approved {
+  id = "prop-pending-123"
+  status = "APPROVED"
+  approvedBy = "admin-uuid"
+}
+object "noti_success : Notification" as noti {
+  type = "PROPERTY_APPROVED"
+  message = "Bài đăng của bạn đã được duyệt"
+}
+
+admin --> prop : reviews
+prop => prop_approved : status changes
+prop_approved --> noti : triggers
+@enduml

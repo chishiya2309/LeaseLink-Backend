@@ -1,0 +1,31 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam dpi 200
+
+class Guest {
+}
+class PropertyController {
+  + searchProperties(req: SearchRequest, page: int): PageResponse
+}
+class PropertyService {
+  + search(req, pageable): Page<Property>
+}
+class PropertySpecification {
+  + buildBasicSearch(req): Specification
+}
+class PropertyRepository {
+  + findAll(spec, pageable): Page
+}
+class Property {
+  + id: UUID
+  + title: String
+  + monthlyPrice: Double
+  + areaId: Long
+}
+
+Guest "1" --> "1" PropertyController : filters
+PropertyController "1" --> "1" PropertyService : calls
+PropertyService "1" --> "1" PropertySpecification : builds
+PropertyService "1" --> "1" PropertyRepository : querying
+PropertyRepository "1" --> "*" Property : returns
+@enduml

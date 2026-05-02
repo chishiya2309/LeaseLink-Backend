@@ -1,0 +1,35 @@
+@startuml
+skinparam classAttributeIconSize 0
+skinparam dpi 200
+
+class AuthController {
+  + login(req: LoginRequest): ResponseEntity<LoginResponse>
+}
+class AuthService {
+  + authenticateUser(email, password): AuthSession
+}
+class UserRepository {
+  + findByEmail(email): User
+}
+class User {
+  + id: UUID
+  + email: String
+  + passwordHash: String
+  + status: user_status
+}
+class AuthSession {
+  + id: UUID
+  + userId: UUID
+  + isActive: Boolean
+}
+class RefreshToken {
+  + tokenHash: String
+  + expiresAt: Timestamp
+}
+
+AuthController "1" --> "1" AuthService : calls
+AuthService "1" --> "1" UserRepository : uses
+UserRepository "1" --> "1" User : returns
+AuthService "1" --> "1" AuthSession : creates
+AuthSession "1" *-- "1" RefreshToken : contains
+@enduml

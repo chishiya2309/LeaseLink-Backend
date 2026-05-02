@@ -1,0 +1,25 @@
+@startuml
+skinparam dpi 200
+
+object "guest_login_req : LoginRequest" as req {
+  email = "host@gmail.com"
+  password = "***"
+}
+object "user_host : User" as user {
+  id = "uuid-1234"
+  email = "host@gmail.com"
+  status = "ACTIVE"
+}
+object "new_session : AuthSession" as session {
+  id = "session-9999"
+  isActive = true
+}
+object "refresh_token : RefreshToken" as rt {
+  tokenHash = "$2a$..."
+  expiresAt = "2026-04-10"
+}
+
+req --> user : attempts to login
+user --> session : owns
+session *-- rt : manages
+@enduml

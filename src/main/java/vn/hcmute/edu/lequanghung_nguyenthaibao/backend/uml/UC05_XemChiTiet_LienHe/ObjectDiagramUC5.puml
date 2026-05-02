@@ -1,0 +1,22 @@
+@startuml
+skinparam dpi 200
+
+object "req_property : Property" as prop {
+  id = "prop-uuid-5678"
+  title = "Thuê Nhà Phố Euro Village"
+  monthlyPrice = 35000000
+}
+object "host_user : User" as host {
+  id = "host-uuid-1111"
+  fullName = "Truong Van B"
+  phone = "0901234567"
+}
+object "detail_response : PropertyDetailResponse" as res {
+  propertyData = [Object]
+  hostData = [Object]
+}
+
+prop --> host : belongs to
+prop --> res : maps to
+host --> res : mapped into
+@enduml

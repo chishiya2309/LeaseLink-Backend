@@ -1,9 +1,14 @@
 package vn.hcmute.edu.lequanghung_nguyenthaibao.backend.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
+
 import java.time.OffsetDateTime;
 import java.util.UUID;
 
+@Setter
+@Getter
 @Entity
 @Table(name = "refresh_tokens")
 public class RefreshToken {
@@ -47,83 +52,4 @@ public class RefreshToken {
         this.issuedAt = OffsetDateTime.now();
     }
 
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public AuthSession getSession() {
-        return session;
-    }
-
-    public void setSession(AuthSession session) {
-        this.session = session;
-    }
-
-    public User getUser() {
-        return user;
-    }
-
-    public void setUser(User user) {
-        this.user = user;
-    }
-
-    public String getTokenHash() {
-        return tokenHash;
-    }
-
-    public void setTokenHash(String tokenHash) {
-        this.tokenHash = tokenHash;
-    }
-
-    public UUID getJti() {
-        return jti;
-    }
-
-    public void setJti(UUID jti) {
-        this.jti = jti;
-    }
-
-    public OffsetDateTime getIssuedAt() {
-        return issuedAt;
-    }
-
-    public void setIssuedAt(OffsetDateTime issuedAt) {
-        this.issuedAt = issuedAt;
-    }
-
-    public OffsetDateTime getExpiresAt() {
-        return expiresAt;
-    }
-
-    public void setExpiresAt(OffsetDateTime expiresAt) {
-        this.expiresAt = expiresAt;
-    }
-
-    public OffsetDateTime getRevokedAt() {
-        return revokedAt;
-    }
-
-    public void setRevokedAt(OffsetDateTime revokedAt) {
-        this.revokedAt = revokedAt;
-    }
-
-    public RefreshToken getReplacedByToken() {
-        return replacedByToken;
-    }
-
-    public void setReplacedByToken(RefreshToken replacedByToken) {
-        this.replacedByToken = replacedByToken;
-    }
-
-    public String getRevokeReason() {
-        return revokeReason;
-    }
-
-    public void setRevokeReason(String revokeReason) {
-        this.revokeReason = revokeReason;
-    }
 }
